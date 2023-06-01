@@ -8,6 +8,9 @@
 ########################################################################
 
 
+#------------------------ Do not unintentionally edit below this line ------------------------
+
+
 
 ### Importing raw data
 
@@ -20,19 +23,23 @@ taxi_trips <- read_csv(file.path(data_path_raw, "taxi_trips.csv"))
 # Upper-case names of columns
 names(taxi_trips) <- toupper(names(taxi_trips))
 
+# Rename columns for consistent format between tables
+names(taxi_trips)[names(taxi_trips) == 'PAYMENTTYPE'] <- 'PAYMENT_TYPE'
+
 # Format VENDORID, RATECODEID, PAYMENTTYPE, TRIP_TYPE columns as character
-taxi_trips$VENDORID <- as.character(taxi_trips$VENDORID)
-taxi_trips$RATECODEID <- as.character(taxi_trips$RATECODEID)
-taxi_trips$PAYMENTTYPE <- as.character(taxi_trips$PAYMENTTYPE)
-taxi_trips$TRIP_TYPE <- as.character(taxi_trips$TRIP_TYPE)
+taxi_trips <- taxi_trips %>% 
+  mutate_at(c("VENDORID", "RATECODEID", "PAYMENT_TYPE", "TRIP_TYPE"), 
+                                       as.character())
 
 # Format PASSENGER_COUNT as integer
 taxi_trips$PASSENGER_COUNT <- as.integer(taxi_trips$PASSENGER_COUNT)
 
+# Format EHAIL_FEE as double - ALL VALUES MISSING
+taxi_trips$EHAIL_FEE <- as.double(taxi_trips$EHAIL_FEE)
+
 # Format STORE_AND_FWD_FLAG, RATECODEID, TRIPTYPE as factor
-taxi_trips$STORE_AND_FWD_FLAG <- as.factor(taxi_trips$STORE_AND_FWD_FLAG)
-taxi_trips$RATECODEID <- as.factor(taxi_trips$RATECODEID)
-taxi_trips$TRIP_TYPE <- as.factor(taxi_trips$TRIP_TYPE)
+taxi_trips <- taxi_trips %>% 
+  mutate_at(c("STORE_AND_FWD_FLAG", "RATECODEID", "TRIP_TYPE"), as.factor)
 
 
 ## Import taxi time and location data and format column types
@@ -46,7 +53,7 @@ taxi_time_location <- mutate(taxi_time_location, LOCATION_DETAILS=NA)
 # Upper-case names of columns
 names(taxi_time_location) <- toupper(names(taxi_time_location))
 
-# Rename columns for consistency between tables
+# Rename columns for consistency between tables and clarity
 names(taxi_time_location)[names(taxi_time_location) == 'LOCATION_CODEID'] <- 'LOCATIONID'
 
 # Format TIME column as date
@@ -67,28 +74,8 @@ taxi_zone_lookup <- read_csv(file.path(data_path_raw, "taxi_zone_lookup.csv"))
 # Upper-case names of columns
 names(taxi_zone_lookup) <- toupper(names(taxi_zone_lookup))
 
+# Rename columns for consistency between tables and clarity
+names(taxi_zone_lookup)[names(taxi_zone_lookup) == 'ZONE'] <- 'ADMIN_ZONE'
+
 # Format LOCATIONID as character
 taxi_zone_lookup$LOCATIONID <- as.character(taxi_zone_lookup$LOCATIONID)
-
-
-
-### Create taxi_time_location_wide
-
-## Transposing taxi_time_location to taxi_time_location_wide with UNIQUEID as row identifier, 
-## with columns for pick-up and drop-off times and locations
-
-# Making each UNIQUEID in taxi_time_location a row identifier
-taxi_time_location_wide <- taxi_time_location %>% 
-  pivot_wider(id_cols=c('UNIQUEID'),
-              names_from = 'TRIP_TYPE',
-              values_from = c('LOCATIONID', 'TIME'))
-
-# Upper-case names of columns
-names(taxi_time_location_wide) <- toupper(names(taxi_time_location_wide))
-
-# Adding columns for pickup_year, pickup_date, pickup_weekday, pickup_hour
-taxi_time_location_wide <- taxi_time_location_wide %>% 
-  mutate(PICKUP_YEAR = year(TIME_PICKUP),
-         PICKUP_DATE = date(TIME_PICKUP),
-         PICKUP_WEEKDAY = wday(TIME_PICKUP, label = TRUE, abbr=FALSE),
-         PICKUP_HOUR = hour(TIME_PICKUP))
