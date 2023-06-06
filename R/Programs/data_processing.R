@@ -221,25 +221,17 @@ write.xlsx(list("Taxi_Trips" = taxi_trips_unduplicated_missing,
 
 
 
-### Cleaning taxi_zone_lookup
-
-# For reporting purposes, turn missing entries in taxi_zone_lookup to Unknown
-taxi_zone_lookup[taxi_zone_lookup$LOCATIONID %in% c(264,265), 
-                 c("BOROUGH", "ZONE", "SERVICE_ZONE")] <- "Unknown"
-
-
-
 ### Exploratory Data Analysis and Cleaning of Taxi_Trips_Unduplicated
 
 
 ## Distributions of Trip Distances
 
-# Plot distribution of trip_distances by trip_type, defining outliers as beyond 10*IQR as you expect a wider range of taxis
-#- We see that trip_type=3 (other) has enormous outliers of up to 270,000 Miles which are clearly wrong - we will filter the data to consider up to 50 Miles
+# Plot distribution of trip_distances by trip_type, defining outliers as beyond 5*IQR as you expect a wider range of taxis
+#- We see that trip_type=3 (other) has enormous outliers of up to 270,000 Miles which are clearly wrong - we will filter the data to consider up to 40 Miles
 taxi_trips_unduplicated %>% 
   ggplot(aes(TRIP_TYPE,
              TRIP_DISTANCE)) +
-  geom_boxplot(coef=10,
+  geom_boxplot(coef=5,
                outlier.shape = 3, outlier.size = 0.5) +
   labs(title="Boxplots of Trip Distance by Trip Type") +
   scale_x_discrete("Trip Type") +
@@ -248,15 +240,15 @@ taxi_trips_unduplicated %>%
                      n.breaks=10) +
   theme_minimal()
 
-# Filter trip distances to those less than 50 miles.
+# Filter trip distances to those less than 40 miles as this is where competition for new york taxis would be generally restricted to
 taxi_trips_unduplicated_cleaned <- taxi_trips_unduplicated %>% 
-  filter(TRIP_DISTANCE < 50 | is.na(TRIP_DISTANCE))
+  filter(TRIP_DISTANCE < 40 | is.na(TRIP_DISTANCE))
 
-# Plot new distribution of trip_distances by trip_type, defining outliers as beyond 10*IQR as you expect a wider range of taxis
-taxi_trips_unduplicated_cleaned %>% 
+# Plot new distribution of trip_distances by trip_type, defining outliers as beyond 5*IQR as you expect a wider range of taxis
+boxplot_type_distance <- taxi_trips_unduplicated_cleaned %>% 
   ggplot(aes(TRIP_TYPE,
              TRIP_DISTANCE)) +
-  geom_boxplot(coef=10,
+  geom_boxplot(coef=5,
                outlier.shape = 3, outlier.size = 0.5) +
   labs(title="Boxplots of Trip Distance by Trip Type (Up to 50 Miles)") +
   scale_x_discrete("Trip Type") +
@@ -265,111 +257,50 @@ taxi_trips_unduplicated_cleaned %>%
                      n.breaks=5) +
   theme_minimal()
 
-# Plot distribution of trip distances by payment_type, defining outliers as beyond 10*IQR as you expect a wider range of taxis
-#- We see there is no payment_type 6=voided trip
-#- We see that NA payment_type has enormous outliers - we will filter the data to consider up to 50 Miles, "competitor" journeys.
-# - We see there is no payment_type 6=voided trip, we will assume voided implies no distance travelled.
-# - here is type NA which we can reclassify as unknown.
-# - We see most payment_type have trips of distance 0, which we will assume are cancelled and relabel as voided
-taxi_trips_unduplicated_cleaned %>% 
-  ggplot(aes(PAYMENT_TYPE,
-             TRIP_DISTANCE)) +
-  geom_boxplot(coef=10,
-               outlier.shape = 3, outlier.size = 0.5) +
-  labs(title="Boxplots of Trip Distance by Payment Type") +
-  scale_x_discrete("Payment Type") +
-  scale_y_continuous("Trip Distance", 
-                     labels=label_number(suffix=" Miles", big.mark = ","),
-                     n.breaks=10) +
-  theme_minimal()
 
-# Reclassifying missing payment_type as '5' (unknown)
-taxi_trips_unduplicated_cleaned <- taxi_trips_unduplicated_cleaned %>% 
-  mutate(PAYMENT_TYPE = ifelse(is.na(PAYMENT_TYPE), 
-                               '5', 
-                               PAYMENT_TYPE))
+## Distribution of Average Fare
 
-# Plot new distribution of trip distances by payment_type, defining outliers as beyond 10*IQR as you expect a wider range of taxis
-taxi_trips_unduplicated_cleaned %>% 
-  ggplot(aes(PAYMENT_TYPE,
-             TRIP_DISTANCE)) +
-  geom_boxplot(coef=10,
-               outlier.shape = 3, outlier.size = 0.5) +
-  labs(title="Boxplots of Trip Distance (Up To 50 Miles) by Redefined Payment Type") +
-  scale_x_discrete("Payment Type") +
-  scale_y_continuous("Trip Distance", 
-                     labels=label_number(suffix=" Miles", big.mark = ","),
-                     n.breaks=5) +
-  theme_minimal()
-
-
-## Distribution of FARE_AMOUNT by PAYMENT_TYPE
-
-# Box plot of fair_amount by payment_type, defining outliers as beyond 10*IQR as you expect a wider range of taxis
-# - We see payment_type 3=No charge and 4=Dispute have non-zero and positive values respectively, but these should be only zero and negative.
-# - 5=Unknown has negative values, these should be allocated to disputes.
-# - Most of the distribution of journeys is skewed right, with a non-negligable fare counts below $200 for cash and credit types. We will filter only to include data under $200.
-# - There are some journeys with negative fees (disputes), with non-negligable fare counts above -$25 for cash and credit types. We will filter only to include data above -$25.
-taxi_trips_unduplicated_cleaned %>% 
-  ggplot(aes(PAYMENT_TYPE, FARE_AMOUNT)) +
-  geom_boxplot(coef=10,
-               outlier.shape = 3, outlier.size = 0.5) +
-  labs(title="Box Plot of Fare Amount by Payment Type") +
-  scale_x_discrete("Payment Type") +
+# Density Plot of trip_distance vs fare_amount
+taxi_trips_unduplicated %>% 
+  ggplot(aes(TRIP_DISTANCE, FARE_AMOUNT)) + 
+  geom_bin2d(bins=100)+
+  labs(title="Trip Distance versus Fare Amount", colour="Count") +
+  scale_x_continuous("Trip Distance", 
+                     n.breaks=5,
+                   labels=label_number(suffix=" Miles", big.mark = ",")) +
   scale_y_continuous("Fare Amount", 
                      labels=label_number(prefix="$", big.mark = ","),
                      n.breaks=10) +
   theme_minimal()
 
-# Filtering data to only include trips between -$25 and $200. 
+# Filtering data to only include fares of trips between -$100 and $100 and this is where the density of fairs is clustered. 
+# - We only filter by fare not other costs as tips can be discretionary outliers, while fares should be somewhat fixed per mile.
 taxi_trips_unduplicated_cleaned <- taxi_trips_unduplicated_cleaned %>% 
-  filter((FARE_AMOUNT < 200 & FARE_AMOUNT > -25) | is.na(FARE_AMOUNT)) 
+  filter((FARE_AMOUNT < 100 & FARE_AMOUNT > -100) | is.na(FARE_AMOUNT)) 
 
-
-taxi_trips_unduplicated_cleaned %>% 
-  ggplot(aes(TRIP_DISTANCE, FARE_AMOUNT, colour=PAYMENT_TYPE)) +
-  geom_point(alpha=0.1)
-
-# THINK MORE CAREFULLY ABOUT FILTERING PAYMENT TYPES LIKE THIS ------------------
-
-
-# Adjusting payment_types 
-# - if fare_amount>0 and payment_type not 1,2 (credit,cash) then payment_type=5 (unknown)
-# - if fare_amount = 0 then payment_type=3 (no charge)
-# - if fare_amount<0 then payment_type=4 (dispute)
-# - if trip_distance=0, assume it was a 6=voided_trip.
-taxi_trips_unduplicated_cleaned <- taxi_trips_unduplicated_cleaned %>% 
-  mutate(PAYMENT_TYPE = case_when(FARE_AMOUNT == 0 ~ "3",
-                                  FARE_AMOUNT < 0 ~ "4",
-                                  ((FARE_AMOUNT > 0 ) & (PAYMENT_TYPE!='1') & (PAYMENT_TYPE!='2') & (PAYMENT_TYPE!='6')) ~ "5",
-                                  TRUE ~ PAYMENT_TYPE)) %>% 
-  mutate(PAYMENT_TYPE=ifelse(TRIP_DISTANCE == 0, 
-                             "6",
-                             PAYMENT_TYPE))
-
-# Box plot of fare_amount by payment_type after recategorisation of payment_type, defining outliers as beyond 10*IQR as you expect a wider range of taxis
-print(
-  taxi_trips_unduplicated_cleaned %>% 
-    ggplot(aes(PAYMENT_TYPE, FARE_AMOUNT)) +
-    geom_boxplot(coef=10,
-                 outlier.shape = 3, outlier.size = 0.5) +
-    labs(title="Box Plot of Fare Amount by Payment Type (After Recategorisation of Payment Types)") +
-    scale_x_discrete("Payment Type") +
-    scale_y_continuous("Fare Amount", 
-                       labels=label_number(prefix="$", big.mark = ","),
-                       n.breaks=5) +
-    theme_minimal())
-
+# Density Plot of trip_distance vs fare_amount after filtering
+bin2d_distance_fare <- taxi_trips_unduplicated_cleaned %>% 
+  ggplot(aes(TRIP_DISTANCE, FARE_AMOUNT)) + 
+  geom_bin2d(bins=100)+
+  labs(title="Trip Distance versus Fare Amount", fill="Count") +
+  scale_x_continuous("Trip Distance", 
+                     n.breaks=5,
+                     labels=label_number(suffix=" Miles", big.mark = ",")) +
+  scale_y_continuous("Fare Amount", 
+                     labels=label_number(prefix="$", big.mark = ","),
+                     n.breaks=10) +
+  theme_minimal()
 
 ## Distribution of passenger count
 
 # Plot distribution of passenger count
-# - A majority of passengers are 1, with the rest of a non-negligible amount all between 0 and 7. We will filter for 7 or less passengers.
+# - A majority of passengers are 1, with the rest of a non-negligible amount all between 0 and 6. We will filter for 6 or less passengers.
 # - There are some journeys with 0 passengers 
-taxi_trips_unduplicated_cleaned %>% 
-  ggplot(aes(PASSENGER_COUNT)) +
-  geom_bar(na.rm=TRUE) +
-  labs(title="Number of Passengers on Trip Distribution") +
+bar_passenger <- taxi_trips_unduplicated_cleaned %>% 
+  ggplot(aes(PASSENGER_COUNT, fill=VENDORID)) +
+  geom_bar(position="Dodge") +
+  labs(title="Number of Passengers on Trip Distribution", 
+       fill="Vendor") +
   scale_x_continuous("Number of Passengers", 
                      n.breaks=10) +
   scale_y_continuous("Frequency", 
@@ -377,47 +308,43 @@ taxi_trips_unduplicated_cleaned %>%
                      n.breaks=5) +
   theme_minimal()
 
-# Filtering data to only include 0-6 passengers as this would be the limit of a typical taxi competitor.
+# Filtering data to only include 0-6 passengers as this would be the limit of a typical taxi capacity.
 taxi_trips_unduplicated_cleaned <- taxi_trips_unduplicated_cleaned %>% 
   filter(PASSENGER_COUNT<7 | is.na(PASSENGER_COUNT))
 
 # Plot new distribution of passenger count
 taxi_trips_unduplicated_cleaned %>% 
-  ggplot(aes(PASSENGER_COUNT)) +
-  geom_bar(na.rm=TRUE) +
-  labs(title="Number of Passengers on Trip Distribution (Up to 7 Passengers)") +
-  scale_x_continuous("Number of Passengers") +
+  ggplot(aes(PASSENGER_COUNT, fill=VENDORID)) +
+  geom_bar(position="Dodge") +
+  labs(title="Number of Passengers on Trip Distribution (Up to 7 Passengers)", 
+       fill="Vendor") +
+  scale_x_continuous("Number of Passengers",
+                     n.breaks=6) +
   scale_y_continuous("Frequency", 
                      labels=label_number(big.mark = ","),
-                     n.breaks=5) +
+                     n.breaks=10) +
   theme_minimal()
 
-
-## Distribution of price-per-mile for ratecodeid
-
-# Boxplot of fare_amount/trip_distance for each ratecodeid
-# - We see a lot of the rate codes have price-per-mile of thousands of dollars which is not normal - we will filter only to include reasonable fairs per mile.
-print(
-  taxi_trips_unduplicated_cleaned %>% 
-    filter(TRIP_DISTANCE > 1) %>% 
-    ggplot(aes(RATECODEID, (FARE_AMOUNT/TRIP_DISTANCE))) +
-    geom_boxplot() +
-    labs(title="Boxplots of Fare Price-Per-Mile by Rate Code") +
-    scale_x_discrete("Rate Code") +
-    scale_y_continuous("Price-Per-Mile", 
-                       labels=label_number(prefix="$", big.mark = ","),
-                       n.breaks=10) +
-    theme_minimal())
+## Add Total_Amount_Plus_Congestion
+taxi_trips_unduplicated_cleaned$TOTAL_AMOUNT_PLUS_CONGESTION <- rowSums(taxi_trips_unduplicated_cleaned[,c("TOTAL_AMOUNT","CONGESTION_SURCHARGE")])
 
 
 
 
 
 
+### Exporting cleaned data frames into clean data folder
+
+
+## Export cleaned taxi_time_location 
 
 
 
+## Export cleaned taxi_trips
 
+
+
+## Export cleaned taxi_zone_lookup
 
 
 

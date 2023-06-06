@@ -18,6 +18,7 @@ output:
     toc_depth: 3
     number_sections: true
     df_print: kable
+geometry: margin=0.5in
 params:
   generator: 
     label: "Person Generating The Report:"
@@ -69,21 +70,50 @@ Summary of problems and corrections with the metadata on import:
 There were `r nrow(taxi_trips_duplicates)` duplicates in the taxi_trips data, `r nrow(taxi_zone_lookup_duplicates)` duplicates in the taxi_zone_lookup data, and `r nrow(taxi_time_location_duplicates)` duplicates in the taxi_time_location data. The duplicates have been saved as an Excel file in the 'Reports' folder to review which data gets duplicated in the collection process.
 
 ### Unexpected Data Value Issues
-* Unexpected values; 
+* Unexpected values;
+  + There are negative and positive fare amounts, this might make sense as they could be refunds, but for clarity data should be collected or flags assigned to point out where this comes from.
   + In rows of taxi_zone_lookup, zone 'NV' inconsistent format with other zones. Treated as typo for NA.
+  + Number of passengers has values up to 30. The typical capacity of a taxi is only going to be 6 people, so clearly data is being collected on the wrong kinds of vehicles.
 * Unexpected categories;
   + Payment type 7 is not defined in the appendix but exists in the data. 
     - For analysis purposes, these were redefined as NA as all corresponded to Vendor 3 which has mostly unknown data.
   + Rate code 8 is not defined in the appendix but exists in the data. Leaving as it is, as all correspond to vendor 3 who might have their own rate code like London cabs.
   + There is a category unknown for payment type - just leave these as NA for convention.
+* Extreme values
+  + There are distances travelled as large as 270,000 miles - data only really needs to be collected up to around 40 miles as this is the maximum distance journey you can expect a New York taxi to travel, and this is reflected by the scatter density of outliers for the pink taxi and uber categories once filtered to 40 miles.
+    - We restrict the data to up to 40 miles for analysis.
+  + Overall, there are outlier fairs of over \$150 for values of around 0 Miles, while also unexpected fairs of \$50 or lower for distances over 10,000 miles - which is clearly wrong intuitively. There must be mistakes in how the data for fare amounts and distances are collected, or the wrong data is being collected.
+  + Most fairs in the 40 mile range are between -\$100 and \$100, with a few outliers of \$480 and around \$150. 
+    - We restrict the data to fares between -\$100 and \$100 for analysis.
+* Value distribution
+  + There is a disproportionate amount of Other and Uber data vs Green taxis, this may reflect the proportion of the true market share by each vendor, but this must be checked.
+  
+```{r include=TRUE}
+
+```
+
+```{r include=TRUE}
+# Plot distribution of trip_distances by trip_type, defining outliers as beyond 10*IQR as you expect a wider range of taxis
+boxplot_type_distance
+
+# Density Plot of trip_distance vs fare_amount
+bin2d_distance_fare
+
+# Bar plot of passenger_count by vendorid
+bar_passenger
+```
+
+### Erroneous Value Issues
+* Total amount does not include the congestion charge, this needs to be corrected or highlighted in the appendix.
+- For analysis purposes, we create a new variable to also include the congestion charge.
 
 ### Missing Data Issues
 
 * Inconsistency with naming convention for missing values - e.g. Unknown, N/A, NA, NV. 
   + All not available data should follow default naming convention NA.
-* The entire Ehail column is missing. Data must be collected or stop storing the variable.
+* The entire E-Hail fee column is missing. Data must be collected or stop storing the variable.
     - For analysis purposes, the column was dropped as it was not needed.
-* The forward flag, 
+* Other vendors have entirely missing columns of values for STORE_AND_FWD_FLAG, RATECODEID, PASSENGER_COUNT, PAYMENT_COUNT, CONGESTION_SURCHARGE. This data needs to be collected or other data collected that enables you to infer these values. 
 
 \newpage
 
@@ -91,8 +121,7 @@ There were `r nrow(taxi_trips_duplicates)` duplicates in the taxi_trips data, `r
 ```{r include=TRUE}
 # Display Only Columns with Missing Values and Their Count
 kable(taxi_trips_unduplicated_number_missing %>% 
-        select_if(~ all(.>0)) %>% 
-        names(c("Passenger Count", "E-Hail Fee", "Payment Type", "Congestion Charge")))
+        select_if(~ all(.>0)))
 ```
 
 ### Extreme Data Issues
