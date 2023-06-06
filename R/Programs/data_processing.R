@@ -15,35 +15,58 @@
 
 #------------------------ Do not unintentionally edit below this line ------------------------
 
-## ---- find_duplicates ----
+
 
 ### Identify Duplicates and Clean from Data
 
-## Count duplicates and remove
+## taxi_trips duplicates
 
-# Find taxi_trip duplicates and create dataframe without duplicates (if duplicates exist) - 67 duplicates
-taxi_trips_duplicated <- df_duplicated(taxi_trips)
-if (exists("taxi_trips_duplicated")&&is.data.frame(get("taxi_trips_duplicated"))){
+# Find taxi_trips duplicates
+taxi_trips_duplicates <- df_duplicated(taxi_trips)
+
+# Create dataframe without duplicates (if duplicates exist) - 67 duplicates
+if (nrow(taxi_trips_duplicates) > 0){
   taxi_trips_unduplicated <- df_unduplicated(taxi_trips)
 } else{
-  print(paste("NOTE: There were no duplicates in",deparse(substitute(taxi_trips)),"- dataframe left unchanged."))
+  print(paste("There were no duplicates in",deparse(substitute(taxi_trips)),"- dataframe left unchanged."))
 }
 
-# Find taxi_time_location duplicates and remove (if duplicates exist) - 0 duplicates, no need to recreate.
-taxi_time_location_duplicated <- df_duplicated(taxi_time_location)
-if (exists("taxi_time_location_duplicated")&&is.data.frame(get("taxi_time_location_duplicated"))){
+
+## taxi_time_location duplicates
+
+# Find taxi_time_location duplicates
+taxi_time_location_duplicates <- df_duplicated(taxi_time_location)
+
+# Create dataframe without duplicates (if duplicates exist), 0  duplicates no need to recreate.
+if (nrow(taxi_time_location_duplicates)>0){
   taxi_time_location_unduplicated <- df_unduplicated(taxi_time_location)
 } else{
-  print(paste("NOTE: There were no duplicates in",deparse(substitute(taxi_time_location)),"- dataframe left unchanged."))
+  print(paste("There were no duplicates in",deparse(substitute(taxi_time_location)),"- dataframe left unchanged."))
 }
 
-# Find taxi_zone_lookup duplicates and remove - 0 duplicates, no need to recreate.
-taxi_zone_lookup_duplicated <- df_duplicated(taxi_zone_lookup)
-if (exists("taxi_zone_lookup_duplicated")&&is.data.frame(get("taxi_zone_lookup_duplicated"))){
+## taxi_zone_lookup duplicates
+
+# Find taxi_zone_lookup duplicates
+taxi_zone_lookup_duplicates <- df_duplicated(taxi_zone_lookup)
+
+# Create dataframe without duplicates (if duplicates exist), 0  duplicates no need to recreate.
+if (nrow(taxi_zone_lookup_duplicates)){
   taxi_zone_lookup_unduplicated <- df_unduplicated(taxi_zone_lookup)
 } else{
-  print(paste("NOTE: There were no duplicates in",deparse(substitute(taxi_zone_lookup)),"- dataframe left unchanged."))
+  print(paste("There were no duplicates in",deparse(substitute(taxi_zone_lookup)),"- dataframe left unchanged."))
 }
+
+
+## Save duplicated data rows for review
+
+# taxi_trips: Missing values all occur simultaneously on a row if ehail_fee dropped - always trip_type=3, Newark
+# taxi_time_location: No missing rows if location_details dropped
+# taxi_zone_lookup: locationid=264,265 have no known details
+write.xlsx(list("Taxi_Trips" = taxi_trips_duplicates, 
+                "Taxi_Time_Location"= taxi_time_location_duplicates, 
+                "Taxi_Zone_Lookup" = taxi_zone_lookup_duplicates), 
+           file=file.path(reports_path, "duplicate_data.xlsx"))
+
 
 
 ### Summary Statistics of Datasets
@@ -83,7 +106,8 @@ print(summary(taxi_time_location[,c("UNIQUEID", "TRIP_TYPE")]))
 
 ## Taxi_Zone_Lookup
 
-# Make missing datatypes consistent in taxi_zone_lookup zo that they can be found by R - assuming NV is a typo for NA.
+# Make missing datatypes consistent in taxi_zone_lookup so that they can be found by R more easily
+# - Assuming NV is a typo for NA by context of NA in row and full text in the remainder of the column.
 taxi_zone_lookup[,"BOROUGH"][taxi_zone_lookup[, "BOROUGH"]=="Unknown"] <- NA
 taxi_zone_lookup[,"ZONE"][taxi_zone_lookup[, "ZONE"]=="NV"] <- NA
 taxi_zone_lookup[,"SERVICE_ZONE"][taxi_zone_lookup[, "SERVICE_ZONE"]=="N/A"] <- NA
@@ -91,11 +115,41 @@ taxi_zone_lookup[,"SERVICE_ZONE"][taxi_zone_lookup[, "SERVICE_ZONE"]=="N/A"] <- 
 
 ## Taxi_Trips
 
+# Plot distribution of payment_type
+taxi_trips_unduplicated %>% 
+  ggplot(aes(PAYMENT_TYPE, fill=VENDORID)) +
+  geom_bar(na.rm=TRUE, position = "dodge") +
+  labs(title="Most Frequent Payment Type by Vendor") +
+  scale_x_discrete("Payment Type") +
+  scale_y_discrete("Frequency", 
+                     labels=label_number(big.mark = ",")) +
+  theme_minimal()
+
 # Make missing datatypes consistent for reporting missing values purposes
-# - There is no payment_type = 7, take it as NA
-# - There is no ratecodeid = 8, take it as NA
-taxi_trips_unduplicated[,"PAYMENT_TYPE"][taxi_trips_unduplicated[, "PAYMENT_TYPE"]==7] <- NA
-taxi_trips_unduplicated[,"RATECODEID"][taxi_trips_unduplicated[, "RATECODEID"]==8] <- NA
+# - Redefining unknown payment_type = 5 as NA for conventional label
+taxi_trips_unduplicated[,"PAYMENT_TYPE"][taxi_trips_unduplicated[, "PAYMENT_TYPE"] == '5'] <- NA
+# - Redefining unknown payment_type = 7 as NA as these values all correspond to VendorID 3 which always has NA columns, so assuming this is just funky-labelled NA.
+taxi_trips_unduplicated[,"PAYMENT_TYPE"][taxi_trips_unduplicated[, "PAYMENT_TYPE"] == '7'] <- NA
+
+# Plot distribution of payment_type after redefining values 5 and 7 as NA. 
+taxi_trips_unduplicated %>% 
+  ggplot(aes(PAYMENT_TYPE, fill=VENDORID)) +
+  geom_bar(na.rm=TRUE, position = "dodge") +
+  labs(title="Most Frequent Payment Type by Vendor") +
+  scale_x_discrete("Payment Type") +
+  scale_y_discrete("Frequency", 
+                   labels=label_number(big.mark = ",")) +
+  theme_minimal()
+
+# Plot distribution of ratecodeid. 
+taxi_trips_unduplicated %>% 
+  ggplot(aes(RATECODEID, fill=VENDORID)) +
+  geom_bar(position = "dodge") +
+  labs(title="Most Frequent Rate by Vendor") +
+  scale_x_discrete("Rate") +
+  scale_y_discrete("Frequency", 
+                   labels=label_number(big.mark = ",")) +
+  theme_minimal()
 
 
 
@@ -107,11 +161,11 @@ taxi_trips_unduplicated[,"RATECODEID"][taxi_trips_unduplicated[, "RATECODEID"]==
 # Count number of missing values in taxi_trips_unduplicated and output as CSV in reports
 taxi_trips_unduplicated_number_missing <- df_missing_count(taxi_trips_unduplicated)
 
-# Automatically drop all columns containing exclusively missing data as there is no fair inference we can make
+# Automatically drop all columns containing exclusively missing data as there is no meaningful inference we can make from them other than data isn't gathered which we can infer from the missing count.
 taxi_trips_unduplicated <- taxi_trips_unduplicated %>% 
   select_if(~ !all(is.na(.)))
 
-# Store rows containing any missing values
+# Store rows containing any missing values in any variable
 taxi_trips_unduplicated_missing <- taxi_trips_unduplicated[rowSums(is.na(taxi_trips_unduplicated)) > 0, ]
 
 
@@ -181,7 +235,7 @@ taxi_zone_lookup[taxi_zone_lookup$LOCATIONID %in% c(264,265),
 ## Distributions of Trip Distances
 
 # Plot distribution of trip_distances by trip_type, defining outliers as beyond 10*IQR as you expect a wider range of taxis
-#- We see that trip_type=3 (other) has enormous outliers - we will filter the data to consider up to 50 Miles
+#- We see that trip_type=3 (other) has enormous outliers of up to 270,000 Miles which are clearly wrong - we will filter the data to consider up to 50 Miles
 taxi_trips_unduplicated %>% 
   ggplot(aes(TRIP_TYPE,
              TRIP_DISTANCE)) +

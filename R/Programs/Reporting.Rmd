@@ -15,7 +15,9 @@ date: |
 output:
   pdf_document:
     toc: true
-    df_print: paged
+    toc_depth: 3
+    number_sections: true
+    df_print: kable
 params:
   generator: 
     label: "Person Generating The Report:"
@@ -25,19 +27,78 @@ params:
     value: "Barbara Mikulášová"
   dir:
     label: "Path to Root Folder of Project:"
-    value: "`r getwd()"
+    value: "/Users/jameswright/Desktop/Amadeus/Graduate Programme/katalyze-taxi-case-study/"
 ---
 
-# Data Collection and Quality Report
-## Data Importing
-### Taxi Trips Data Set
-\begin{center}
-  \begin{tabular}{| c ||| c | c || c | c || c |}
-     Description & Original Variable Name & Original Type & New Variable Name & New Type & Reason
-    \hline\hline
-    UniqueID & Original Variable Name & Original Type & New Variable Name & New Type & Reason \\ 
-    \hline
-  \end{tabular}
-\end{center}
+\pagebreak
 
+```{r include=FALSE}
+knitr::opts_chunk$set( 
+  root.dir = getwd(),
+  echo = FALSE, 
+  warning = FALSE, 
+  message = FALSE, 
+  include = FALSE)
+
+path <- params$dir
+programs_path <- file.path(path, 'R', 'Programs')
+source(file.path(path, 'R', 'autoexec.R'), local = knitr::knit_global())
+source(file.path(programs_path, 'data_import.R'), local = knitr::knit_global())
+```
+
+# Data Collection and Quality Report
+
+```{r}
+source(file.path(programs_path, 'data_processing.R'), local = knitr::knit_global())
+```
+
+## Data Collection
+
+### Metadata Quality Issues
+
+Summary of problems and corrections with the metadata on import:
+
+* All variable names should be upper-case by convention for formatting clarity;
+* Inconsistent variable name word-separation convention across table variables - variable PAYMENTTYPE in taxi_trips renamed to PAYMENT_TYPE ;
+* Inconsistent ID variable name convention and naming - variable LOCATION_CODEID in taxi_time_location renamed to LOCATIONID for a consistent ID format across tables and common name across tables;
+* Missing variables - variable LOCATION_DETAILS column in taxi_time_location was missing but is in appendix- added containing NA values for completeness.
+* Ill-defined field categories in appendix, 'no charge', 'dispute', 'voided' need definitions.
+
+### Duplication Issues
+
+There were `r nrow(taxi_trips_duplicates)` duplicates in the taxi_trips data, `r nrow(taxi_zone_lookup_duplicates)` duplicates in the taxi_zone_lookup data, and `r nrow(taxi_time_location_duplicates)` duplicates in the taxi_time_location data. The duplicates have been saved as an Excel file in the 'Reports' folder to review which data gets duplicated in the collection process.
+
+### Unexpected Data Value Issues
+* Unexpected values; 
+  + In rows of taxi_zone_lookup, zone 'NV' inconsistent format with other zones. Treated as typo for NA.
+* Unexpected categories;
+  + Payment type 7 is not defined in the appendix but exists in the data. 
+    - For analysis purposes, these were redefined as NA as all corresponded to Vendor 3 which has mostly unknown data.
+  + Rate code 8 is not defined in the appendix but exists in the data. Leaving as it is, as all correspond to vendor 3 who might have their own rate code like London cabs.
+  + There is a category unknown for payment type - just leave these as NA for convention.
+
+### Missing Data Issues
+
+* Inconsistency with naming convention for missing values - e.g. Unknown, N/A, NA, NV. 
+  + All not available data should follow default naming convention NA.
+* The entire Ehail column is missing. Data must be collected or stop storing the variable.
+    - For analysis purposes, the column was dropped as it was not needed.
+* The forward flag, 
+
+\newpage
+
+#### Count of Columns with Missing Values
+```{r include=TRUE}
+# Display Only Columns with Missing Values and Their Count
+kable(taxi_trips_unduplicated_number_missing %>% 
+        select_if(~ all(.>0)) %>% 
+        names(c("Passenger Count", "E-Hail Fee", "Payment Type", "Congestion Charge")))
+```
+
+### Extreme Data Issues
+
+#### Unduplicated Data Summary Report
+
+
+\pagebreak
 # Data Analysis Report

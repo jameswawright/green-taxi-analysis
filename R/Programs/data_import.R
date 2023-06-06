@@ -7,79 +7,56 @@
 #             Katalyze Data Ltd.                                       #
 ########################################################################
 
-
-#------------------------ Do not unintentionally edit below this line ------------------------
-
-
-
-### Importing raw data
+### Importing raw data - formatting manually with dplyr rather than col_types in readr for safety of name references
 
 
 ## Import and format taxi trip data
 
-# Import data
-taxi_trips <- read_csv(file.path(data_path_raw, "taxi_trips.csv"))
-
-# Upper-case names of columns for convenience
-names(taxi_trips) <- toupper(names(taxi_trips))
+# Import data with upper case variable names
+taxi_trips <- read_csv_better(data_path_raw, "taxi_trips.csv")
 
 # Rename columns for consistent format between tables
 names(taxi_trips)[names(taxi_trips) == 'PAYMENTTYPE'] <- 'PAYMENT_TYPE'
 
 # Format types
-# - VENDORID, RATECODEID, PAYMENTTYPE, TRIP_TYPE columns as character
+# - Reformat VENDORID, RATECODEID, PAYMENTTYPE, TRIP_TYPE columns as character
+# - Reformat PASSENGER_COUNT as integer
+# - Reformat EHAIL_FEE as double - supposed to be $ amount - ALL VALUES MISSING
+# - Restructure STORE_AND_FWD_FLAG as logical value as it is a flag, convert Y=1 and N=0, then turn into logical.
 taxi_trips <- taxi_trips %>% 
   mutate_at(c("VENDORID", "RATECODEID", "PAYMENT_TYPE", "TRIP_TYPE"), 
                                        as.character) %>% 
   mutate_at(c("PASSENGER_COUNT"), as.integer) %>% 
-  mutate_at(c("EHAIL_FEE"), as.double) %>% 
-  mutate_at(c("RATECODEID", "PAYMENT_TYPE", "TRIP_TYPE", "STORE_AND_FWD_FLAG"), as.factor)
+  mutate_at(c("EHAIL_FEE"), as.double) %>%
+  mutate_at(c("STORE_AND_FWD_FLAG"), as.factor)
 
-# Format PASSENGER_COUNT as integer
-taxi_trips$PASSENGER_COUNT <- as.integer(taxi_trips$PASSENGER_COUNT)
-
-# Format EHAIL_FEE as double - ALL VALUES MISSING
-taxi_trips$EHAIL_FEE <- as.double(taxi_trips$EHAIL_FEE)
-
-# Format STORE_AND_FWD_FLAG, RATECODEID, TRIPTYPE as factor
-taxi_trips <- taxi_trips %>% 
-  mutate_at(c("RATECODEID", "PAYMENT_TYPE", "TRIP_TYPE", "STORE_AND_FWD_FLAG"), as.factor)
 
 ## Import taxi time and location data and format column types
 
-# Import data
-taxi_time_location <- read_csv(file.path(data_path_raw, "taxi_time_location.csv"))
-
-# For completeness, adding LOCATION_DETAILS column to taxi_time_location table as it is missing but in appendix
-taxi_time_location <- mutate(taxi_time_location, LOCATION_DETAILS=NA)
-
-# Upper-case names of columns
-names(taxi_time_location) <- toupper(names(taxi_time_location))
+# Import data with upper case variable names
+taxi_time_location <- read_csv_better(data_path_raw, "taxi_time_location.csv")
 
 # Rename columns for consistency between tables and clarity
 names(taxi_time_location)[names(taxi_time_location) == 'LOCATION_CODEID'] <- 'LOCATIONID'
 
-# Format TIME column as date
-taxi_time_location$TIME <- as.POSIXct(taxi_time_location$TIME)
-
-#Format LOCATION_CODEID as character
-taxi_time_location$LOCATIONID <- as.character(taxi_time_location$LOCATIONID)
-
-# Format trip_type as factor
-taxi_time_location$TRIP_TYPE <- as.factor(taxi_time_location$TRIP_TYPE)
+# Format types
+# - For completeness, adding LOCATION_DETAILS column to taxi_time_location table as it is missing but in appendix
+# - Reformat LOCATIONID as character, the former a description the latter a category
+# - Reformat TIME as a datetime
+# - Reformat LOCATION_DETAILS as logical as it is a flag
+taxi_time_location <- taxi_time_location %>% 
+  mutate(LOCATION_DETAILS=NA) %>% 
+  mutate_at(c("LOCATIONID"), as.character) %>% 
+  mutate_at(c("TIME"), as.POSIXct) %>% 
+  mutate_at(c("LOCATION_DETAILS"), as.logical)
 
 
 ## Import taxi zone look-up data and format column types
 
-# Import Data
-taxi_zone_lookup <- read_csv(file.path(data_path_raw, "taxi_zone_lookup.csv"))
-
-# Upper-case names of columns
-names(taxi_zone_lookup) <- toupper(names(taxi_zone_lookup))
-
-# Rename columns
-taxi_zone_lookup <- taxi_zone_lookup 
+# Import data with upper case variable names
+taxi_zone_lookup <- read_csv_better(data_path_raw, "taxi_zone_lookup.csv")
 
 # Format LOCATIONID as character
-taxi_zone_lookup$LOCATIONID <- as.character(taxi_zone_lookup$LOCATIONID)
+taxi_zone_lookup <- taxi_zone_lookup %>% 
+  mutate_at(c("LOCATIONID"), as.character)
 

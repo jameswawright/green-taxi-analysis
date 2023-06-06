@@ -7,12 +7,9 @@
 #             Katalyze Data Ltd.                                       #
 ########################################################################
 
-
-
-
-path <- getwd()
-
-
+# Temporary delete after
+path <- "/Users/jameswright/Desktop/Amadeus/Graduate Programme/katalyze-taxi-case-study/"
+programs_path <- file.path(path, 'R', 'Programs')
 
 #------------------------ Do not unintentionally edit below this line ------------------------
 
@@ -24,30 +21,20 @@ set.seed(2023)
 ### Assign paths to file structure
 
 
-## Paths to data
+## Paths
 
 # Path to raw data
-data_path_raw <- file.path(path, "Data","Raw")
+data_path_raw <- file.path(path, "R", "Data","Raw")
 
 # Path to detailed/cleaned data
-data_path_clean <- file.path(path, "Data","Clean")
-
-
-## Paths to programs and reports
-
-# Path to programs
-programs_path <- file.path(path, "Programs")
+data_path_clean <- file.path(path, "R", "Data","Clean")
 
 # Path to reports
-reports_path <- file.path(path, "Reports")
+reports_path <- file.path(path, "R", "Reports")
 
 
 
 ### Install and import required packages and libraries
-
-
-## Import support utility functions package
-source(file.path(programs_path,"utilities.R"), echo=FALSE)
 
 
 ## Installs any packages if missing, otherwise setdiff is false and does nothing 
@@ -61,14 +48,20 @@ packages <- c("rmarkdown",
               "lubridate",
               "readr",
               "tidyr",
-              "roxygen2",
               "purrr",
               "openxlsx",
-              "scales")
+              "scales",
+              "roxygen2")
 
 # Install
-for (lib in packages){
-  test_library(lib)
+for (package in packages){
+  if (!require(package,character.only = TRUE))
+  {
+    install.packages(package,dep=TRUE, quiet=TRUE)
+    if(!require(package,character.only = TRUE)) {
+      stop("Package not found")
+    }
+  }
 }
 
 
@@ -91,7 +84,7 @@ library(purrr)
 library(readr)
 library(openxlsx)
 
-# Other
+#Other
 library(roxygen2)
 
 ## Import support utility functions package
