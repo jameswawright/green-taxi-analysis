@@ -7,7 +7,6 @@
 #             Katalyze Data Ltd.                                       #
 ########################################################################
 
-# AUTOEXEC.R MUST BE RAN FIRST.
 
 #------------------------ Do not unintentionally edit below this line ------------------------
 

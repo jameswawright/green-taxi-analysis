@@ -13,12 +13,22 @@
 
 ### Import Utilities
 
+## Function to produce dataframe of duplicates if duplicates exist, else print they don't exist.
+#' @param str String of library name
+test_library <- function(x)
+{
+  if (!require(x,character.only = TRUE))
+  {
+    install.packages(x,dep=TRUE)
+    if(!require(x,character.only = TRUE)) stop("Package not found")
+  }
+}
 
 
 ### Cleaning Utilities
 
+
 ## Function to produce dataframe of duplicates if duplicates exist, else print they don't exist.
-#' Identify Duplicate Rows, Output Duplicate and unduplicated datasets
 #' @param df Dataframe to find duplicates from
 #' @return Dataframe of duplicates
 df_duplicated <- function(df){
@@ -35,8 +45,8 @@ df_duplicated <- function(df){
   }
 }
 
+
 ## Function to produce dataframe with duplicates removed
-#' Identify Duplicate Rows, Output Duplicate and unduplicated datasets
 #' @param df Dataframe to remove duplicates from
 #' @return Dataframe without duplicates
 df_unduplicated <- function(df){
@@ -49,20 +59,22 @@ df_unduplicated <- function(df){
   return(df_unduplicated)
 }
 
+
 ## Function to count missing values in a dataframe
-#' Identify Duplicate Rows, Output Duplicate and unduplicated datasets. Saves missing value count as a spreadsheet.
+#' Identify Duplicate Rows, Output Duplicate and unduplicated datasets.
 #' @param df Dataframe to remove duplicates from
 #' @param path String as path to folder
 #' @param filename String to name csv file
 #' @return Dataframe of summed missing values
-df_missing_count <- function(df, path, filename){
+df_missing_count <- function(df){
   
   # Produce dataframe counting missing values
   df_missing <- map_df(df, function(x) sum(is.na(x)))
   
-  # Save as report
-  write.csv(df_missing, file.path(path, paste0(filename,".csv")), row.names=FALSE)
-  
   # Return dataframe  containing missing values
   return(df_missing)
 }
+
+
+
+### Plotting Utilities

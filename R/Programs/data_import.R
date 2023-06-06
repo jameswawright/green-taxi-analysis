@@ -15,21 +15,25 @@
 ### Importing raw data
 
 
-## Import taxi trip data
+## Import and format taxi trip data
 
 # Import data
 taxi_trips <- read_csv(file.path(data_path_raw, "taxi_trips.csv"))
 
-# Upper-case names of columns
+# Upper-case names of columns for convenience
 names(taxi_trips) <- toupper(names(taxi_trips))
 
 # Rename columns for consistent format between tables
 names(taxi_trips)[names(taxi_trips) == 'PAYMENTTYPE'] <- 'PAYMENT_TYPE'
 
-# Format VENDORID, RATECODEID, PAYMENTTYPE, TRIP_TYPE columns as character
+# Format types
+# - VENDORID, RATECODEID, PAYMENTTYPE, TRIP_TYPE columns as character
 taxi_trips <- taxi_trips %>% 
   mutate_at(c("VENDORID", "RATECODEID", "PAYMENT_TYPE", "TRIP_TYPE"), 
-                                       as.character())
+                                       as.character) %>% 
+  mutate_at(c("PASSENGER_COUNT"), as.integer) %>% 
+  mutate_at(c("EHAIL_FEE"), as.double) %>% 
+  mutate_at(c("RATECODEID", "PAYMENT_TYPE", "TRIP_TYPE", "STORE_AND_FWD_FLAG"), as.factor)
 
 # Format PASSENGER_COUNT as integer
 taxi_trips$PASSENGER_COUNT <- as.integer(taxi_trips$PASSENGER_COUNT)
@@ -39,8 +43,7 @@ taxi_trips$EHAIL_FEE <- as.double(taxi_trips$EHAIL_FEE)
 
 # Format STORE_AND_FWD_FLAG, RATECODEID, TRIPTYPE as factor
 taxi_trips <- taxi_trips %>% 
-  mutate_at(c("STORE_AND_FWD_FLAG", "RATECODEID", "TRIP_TYPE"), as.factor)
-
+  mutate_at(c("RATECODEID", "PAYMENT_TYPE", "TRIP_TYPE", "STORE_AND_FWD_FLAG"), as.factor)
 
 ## Import taxi time and location data and format column types
 
@@ -74,8 +77,9 @@ taxi_zone_lookup <- read_csv(file.path(data_path_raw, "taxi_zone_lookup.csv"))
 # Upper-case names of columns
 names(taxi_zone_lookup) <- toupper(names(taxi_zone_lookup))
 
-# Rename columns for consistency between tables and clarity
-names(taxi_zone_lookup)[names(taxi_zone_lookup) == 'ZONE'] <- 'ADMIN_ZONE'
+# Rename columns
+taxi_zone_lookup <- taxi_zone_lookup 
 
 # Format LOCATIONID as character
 taxi_zone_lookup$LOCATIONID <- as.character(taxi_zone_lookup$LOCATIONID)
+
