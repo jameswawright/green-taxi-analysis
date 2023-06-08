@@ -9,7 +9,6 @@
 
 ### Importing raw data - formatting manually with dplyr rather than col_types in readr for safety of name references
 
-
 ## Import and format taxi trip data
 
 # Import data with upper case variable names
@@ -22,14 +21,16 @@ names(taxi_trips)[names(taxi_trips) == 'PAYMENTTYPE'] <- 'PAYMENT_TYPE'
 # - Reformat VENDORID, RATECODEID, PAYMENTTYPE, TRIP_TYPE columns as character
 # - Reformat PASSENGER_COUNT as integer
 # - Reformat EHAIL_FEE as double - supposed to be $ amount - ALL VALUES MISSING
-# - Restructure STORE_AND_FWD_FLAG as logical value as it is a flag, convert Y=1 and N=0, then turn into logical.
+# - Reformat STORE_AND_FWD_FLAG as factor.
+# - Keeping character columns as they are for cleaning phase at this stage, to identify NAs vs. alternative values
 taxi_trips <- taxi_trips %>% 
   mutate_at(c("VENDORID", "RATECODEID", "PAYMENT_TYPE", "TRIP_TYPE"), 
                                        as.character) %>% 
   mutate_at(c("PASSENGER_COUNT"), as.integer) %>% 
-  mutate_at(c("EHAIL_FEE"), as.double) %>%
-  mutate_at(c("STORE_AND_FWD_FLAG"), as.factor)
-
+  mutate_at(c("EHAIL_FEE"), as.double) %>% 
+  mutate(STORE_AND_FWD_FLAG = factor(STORE_AND_FWD_FLAG,
+                                     levels=c('Y','N'),
+                                     labels=c('Store and Forward Trip', 'Not a Store and Forward Trip')))
 
 ## Import taxi time and location data and format column types
 

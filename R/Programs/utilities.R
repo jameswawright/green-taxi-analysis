@@ -61,7 +61,8 @@ df_duplicated <- function(df){
 df_missing_count <- function(df){
   
   # Produce dataframe counting missing values
-  df_missing <- map_df(df, function(x) sum(is.na(x)))
+  df_missing <- df %>% 
+    summarise(across(everything(), ~ sum(is.na(.))))
   
   # Return dataframe  containing missing values
   return(df_missing)
@@ -70,3 +71,6 @@ df_missing_count <- function(df){
 
 
 ### Plotting Utilities
+
+
+

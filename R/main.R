@@ -24,3 +24,11 @@ source(file.path(programs_path,"data_processing.R"), echo=FALSE)
 
 
 ## Generate reports
+
+# Data Analysis
+source(file.path(programs_path, "data_analysis.R"), echo=FALSE)
+
+# RMarkdown Report
+
+
+

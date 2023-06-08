@@ -14,11 +14,13 @@ date: |
   | `r format(as.Date("2023-06-07"), format="%A %d %B %Y")`
 output:
   pdf_document:
+    latex_engine: xelatex
     toc: true
     toc_depth: 3
     number_sections: true
     df_print: kable
-geometry: margin=0.5in
+mainfont: "Arial"
+geometry: margin=1in
 params:
   generator: 
     label: "Person Generating The Report:"
@@ -34,100 +36,302 @@ params:
 \pagebreak
 
 ```{r include=FALSE}
+# Set options
 knitr::opts_chunk$set( 
   root.dir = getwd(),
   echo = FALSE, 
   warning = FALSE, 
-  message = FALSE, 
-  include = FALSE)
+  message = TRUE, 
+  include = FALSE,
+  fig.align = 'center',
+  out.width = "80%",
+  out.height = "50%")
 
+# Ban scientific notation for session
+options(scipen=999)
+
+# Source and set path
 path <- params$dir
 programs_path <- file.path(path, 'R', 'Programs')
 source(file.path(path, 'R', 'autoexec.R'), local = knitr::knit_global())
 source(file.path(programs_path, 'data_import.R'), local = knitr::knit_global())
 ```
 
-# Data Collection and Quality Report
+# Data Quality Report
 
 ```{r}
-source(file.path(programs_path, 'data_processing.R'), local = knitr::knit_global())
+source(file.path(programs_path, 'data_processing.R'), 
+       local = knitr::knit_global())
 ```
 
-## Data Collection
 
-### Metadata Quality Issues
+## Metadata Quality Issues
 
 Summary of problems and corrections with the metadata on import:
 
 * All variable names should be upper-case by convention for formatting clarity;
-* Inconsistent variable name word-separation convention across table variables - variable PAYMENTTYPE in taxi_trips renamed to PAYMENT_TYPE ;
-* Inconsistent ID variable name convention and naming - variable LOCATION_CODEID in taxi_time_location renamed to LOCATIONID for a consistent ID format across tables and common name across tables;
-* Missing variables - variable LOCATION_DETAILS column in taxi_time_location was missing but is in appendix- added containing NA values for completeness.
-* Ill-defined field categories in appendix, 'no charge', 'dispute', 'voided' need definitions.
+* There should be a consistent variable name word-separation convention across table variables; 
+  - For example, variable PAYMENTTYPE in taxi_trips renamed to PAYMENT_TYPE.
+* There should be a consistent variable name conventions across all tables; 
+  - For example, variable LOCATION_CODEID in taxi_time_location renamed to LOCATIONID for a consistent ID format across tables and common name across tables.
+* Missing variables 
+  + Tip amount only includes credit card tips, data should be collected on cash tips to help future analysis.
+  + The entire variable LOCATION_DETAILS column in taxi_time_location was missing but is in appendix;
+    - Added containing NA values for completeness on load.
+* Ill-defined groups in appendix - 'no charge', 'dispute', 'voided' need clear definitions of their categorisation for potential prediction of missing value purposes.
 
-### Duplication Issues
+## Duplication Issues
 
-There were `r nrow(taxi_trips_duplicates)` duplicates in the taxi_trips data, `r nrow(taxi_zone_lookup_duplicates)` duplicates in the taxi_zone_lookup data, and `r nrow(taxi_time_location_duplicates)` duplicates in the taxi_time_location data. The duplicates have been saved as an Excel file in the 'Reports' folder to review which data gets duplicated in the collection process.
+Summary of problems and corrections of duplicates:
 
-### Unexpected Data Value Issues
+* There should not be duplicates stored in the data.
+- There were `r nrow(taxi_trips_duplicates)` duplicates in the taxi_trips data, `r nrow(taxi_zone_lookup_duplicates)` duplicates in the taxi_zone_lookup data, and `r nrow(taxi_time_location_duplicates)` duplicates in the taxi_time_location data. 
+- The duplicates have been saved as an Excel file in the 'Reports' folder to help review which data gets duplicated in the collection process.
+
+## Unexpected Data Value Issues
+
+Summary of problems and corrections of the data values:
+
 * Unexpected values;
-  + There are negative and positive fare amounts, this might make sense as they could be refunds, but for clarity data should be collected or flags assigned to point out where this comes from.
-  + In rows of taxi_zone_lookup, zone 'NV' inconsistent format with other zones. Treated as typo for NA.
-  + Number of passengers has values up to 30. The typical capacity of a taxi is only going to be 6 people, so clearly data is being collected on the wrong kinds of vehicles.
-* Unexpected categories;
-  + Payment type 7 is not defined in the appendix but exists in the data. 
-    - For analysis purposes, these were redefined as NA as all corresponded to Vendor 3 which has mostly unknown data.
-  + Rate code 8 is not defined in the appendix but exists in the data. Leaving as it is, as all correspond to vendor 3 who might have their own rate code like London cabs.
-  + There is a category unknown for payment type - just leave these as NA for convention.
-* Extreme values
-  + There are distances travelled as large as 270,000 miles - data only really needs to be collected up to around 40 miles as this is the maximum distance journey you can expect a New York taxi to travel, and this is reflected by the scatter density of outliers for the pink taxi and uber categories once filtered to 40 miles.
-    - We restrict the data to up to 40 miles for analysis.
-  + Overall, there are outlier fairs of over \$150 for values of around 0 Miles, while also unexpected fairs of \$50 or lower for distances over 10,000 miles - which is clearly wrong intuitively. There must be mistakes in how the data for fare amounts and distances are collected, or the wrong data is being collected.
-  + Most fairs in the 40 mile range are between -\$100 and \$100, with a few outliers of \$480 and around \$150. 
-    - We restrict the data to fares between -\$100 and \$100 for analysis.
+  + There are negative and positive fare amounts, this might make sense as they could be refunds for voided and free trips so they have been kept in the cleaned data, but for clarity data should be collected or flags assigned to point out where a $\pm$ sign comes from.
+  + In rows of taxi_zone_lookup, there is a zone 'NV' which is inconsistent with the naming of other zones. Care should be taken inputting values to be consistent.
+    - This was treated as typo for NA based on the surrounding context of other NAs in the row for reporting purposes.
+  + Number of passengers has values up to 30. The typical capacity of a taxi is only going to be 6 people, so data is likely being collected on the wrong kinds of vehicles.
+* Unexpected categories - all data category values must be accounted for / explained;
+  + A payment type '7' and rate code '8' are not defined in the appendix but exist in the data.
+    - Redefined '7' values as Unknown '5' in the cleaned data for reporting purposes.
+  + Rate code '8' is not defined in the appendix but exists in the data. 
+    - Leaving as it is, as all correspond to vendor 3 who might have their own rate code like London cabs.
 * Value distribution
-  + There is a disproportionate amount of Other and Uber data vs Green taxis, this may reflect the proportion of the true market share by each vendor, but this must be checked.
-  
-```{r include=TRUE}
-
-```
+  + There is a disproportionate amount of Other versus Uber data versus Green taxis, this may reflect the proportion of the true market share by each vendor, but this must be checked to make sure collection is fair.
 
 ```{r include=TRUE}
-# Plot distribution of trip_distances by trip_type, defining outliers as beyond 10*IQR as you expect a wider range of taxis
-boxplot_type_distance
-
-# Density Plot of trip_distance vs fare_amount
-bin2d_distance_fare
-
 # Bar plot of passenger_count by vendorid
 bar_passenger
 ```
 
-### Erroneous Value Issues
-* Total amount does not include the congestion charge, this needs to be corrected or highlighted in the appendix.
-- For analysis purposes, we create a new variable to also include the congestion charge.
 
-### Missing Data Issues
+## Missing Data Issues
 
 * Inconsistency with naming convention for missing values - e.g. Unknown, N/A, NA, NV. 
   + All not available data should follow default naming convention NA.
 * The entire E-Hail fee column is missing. Data must be collected or stop storing the variable.
     - For analysis purposes, the column was dropped as it was not needed.
-* Other vendors have entirely missing columns of values for STORE_AND_FWD_FLAG, RATECODEID, PASSENGER_COUNT, PAYMENT_COUNT, CONGESTION_SURCHARGE. This data needs to be collected or other data collected that enables you to infer these values. 
+* Other vendors have entirely missing columns of values for forward flag, rate code, e-hail fee, passenger count, and congestion surcharge. 
+  - This data needs to be collected or other data collected that enables you to infer these values using known values.
+* Data was only available in 2021 for late June to early August. More data should be collected for 2021.
 
 \newpage
 
-#### Count of Columns with Missing Values
+### Count of Columns with Missing Values
 ```{r include=TRUE}
 # Display Only Columns with Missing Values and Their Count
 kable(taxi_trips_unduplicated_number_missing %>% 
-        select_if(~ all(.>0)))
+        select(where(~ any(.>0))),
+      col.names = c('Forward Flag', 'Passenger Count', 'E-Hail Fee', 'Congestion Surcharge'),
+      digits = 0,
+      caption = "Count of Columns with Missing Values")
 ```
 
-### Extreme Data Issues
+## Extreme Data Issues
 
-#### Unduplicated Data Summary Report
+* There are distances travelled as large as 270,000 miles - data only really needs to be collected up to around 40 miles as this is the maximum distance journey you can expect a New York taxi to travel, and this is reflected by the scatter density of outliers for the pink taxi and uber categories once filtered to 40 miles.
+  + We restrict the data to up to 40 miles in the cleaned data for analysis.
+* There are outlier fairs of over \$200 for values of around 0 Miles, while also unexpected fairs of \$50 or lower for distances over 10,000 miles - which is clearly wrong intuitively. There must be mistakes in how the data for fare amounts and distances are collected, or the wrong data is being collected to include non-standard 'taxis'.
+  + Most fairs in the 40 mile range are between -\$200 and \$200, with a few outliers above and below, so restricted the data to fares between -\$200 and \$200 for analysis.
 
+```{r include=TRUE}
+# Plot distribution of trip_distances by trip_type, defining outliers as beyond 10*IQR as you expect a wider range of taxis
+boxplot_type_distance
+```  
+
+```{r include=TRUE}
+# Density Plot of trip_distance vs fare_amount
+bin2d_distance_fare
+```
 
 \pagebreak
+
 # Data Analysis Report
+
+```{r}
+source(file.path(programs_path, 'data_analysis.R'), local = knitr::knit_global())
+```
+
+***Important Note:*** This analysis is conducted using only July 2021 data, as only data from late June to early August was available. We chose to consider only July 2021 data so as to present the data over a well-defined non-arbitrary time frame. A natural way to estimate the analogous yearly results would be to multiply the presented July values by 12, however this estimates accuracy would depend on the other 11 months - such as March or December - to 'on average' balance out^[Formally, called an [ergodic regime](https://en.wikipedia.org/wiki/Ergodic_process).] so that July is a typical representative of a typical month in a year. We have no intuitive reason to believe July could be representative of the rest of the year on average so cannot make this assumption - in fact, you would expect months such as July and December to be atypically busy in New York due to tourism and extreme weather, that is, external factors will be influencing demand, traffic flow, and so on for the data we have available. Hence, we leave the results for the month of July only.
+
+## Assumptions
+
+We will take an estimate cost-per-mile for our non-Green taxi data to be that of a typical diesel car, roughly \$0.20 - less than 5% of Ubers are electric, and we will assume the other competitor is also not green. We will also take an estimate cost-per-mile for Green taxis to be that of a typical electric car, roughly $0.03.
+
+Hence, profit per trip is computed as, where $\alpha_{i=1}$ would be \$0.03 for Green taxi, or $\alpha_{i=2}$ and $\alpha_{i=3}$ would be \$0.20 for Uber or other,
+\begin{align*}
+  \text{Profit} &= \underbrace{\text{Total Amount}}_\text{Revenue-Per-Trip} \\ &- \underbrace{(\alpha_i \text{Miles} + \text{Congestion Surcharge} + \text{Tolls Amount} + \text{MTA Tax} + \text{Improvement Surcharge})}_\text{Cost-Per-Trip}.
+\end{align*}
+
+
+## Average Weekday Expenditure
+
+```{r include=TRUE}
+kable(average_spent_week_green_taxi_2021,
+      col.names = c('Weekday', 'Average Spend'),
+      digits = 2,
+      align = "lc",
+      caption = "Average Amount Spent on Taxi Trips with Green Taxi On A Weekday in July 2021")
+```
+
+We see the more was typically spent on Sunday on average, with a value of `r average_spent_week_green_taxi_2021[[1,2]]`.
+
+## Feature Effect on the Tip Amount for Green Taxi
+
+We only consider non-zero dollar tips to study the influence of features on the tip amount. We only looked at tips between \$0 and \$25 to ignore extreme outliers. We also independently study the effect of the features on tip or no tip. As the tip data only includes the payments with credit card, we only consider the credit card payment type.
+
+### Pick-up hour
+
+
+```{r include=TRUE}
+tipamt_pickup_hour
+```
+
+We see from the above boxplot that the early hours of the morning will have higher tips on average, and these tips have greater variability - you are more likely to receive a larger tip in the early hours of the morning. In general, there is a lot of variability in possible tip values for a given pick-up hour.
+
+```{r include=TRUE}
+notip_pickup_hour
+```
+
+From 4:00 to 7:00 there is a lower probability to receive a tip than normal - from 40% to 60%, even though the tips given are larger if they are. Throughout the rest of the day, there is a 70%-80% chance of being given a tip.
+
+Hence, it follows that pick-up hour is a poor predictor of tip amount for the early morning due to high variability. The roughly 50% chance of a tip in the early morning also means there is little information gained about the chance of receiving a tip relative to just guessing if using this predictor in this hour. The rest of the day, this predictor is good for deciding that a tip will occur - with 80% chance. It is a reasonably predictor of the value of a given tip, due to the high variability at the extremes, however 75% of those values are in a small range around \$2.50 for those hours.
+
+### Payment type
+
+It is impossible to know if payment type has any impact on the tip amount given that the tip amount data only tracks tips made on credit card. More data must be collected on cash tips.
+
+### Passenger count
+
+We excluded data from other vendor in the analysis as their passenger accounts are entirely unknown.
+
+```{r include=TRUE}
+tipamt_passenger_count
+```
+
+The boxplot above shows that the average tip is likely to be around \$2.50 regardless of the number of passengers, and similarly the typical range of tips is similar - roughly 75% of the tips are between \$1.25 and \$3.75 for low numbers of passengers. For zero passengers (say, deliveries), there is a 75% chance the tip is roughly between \$2 and \$4.75. Lower number of passengers are more likely to give larger extreme tips, with a relatively dense 'cluster' of extreme values even around \$20 for 1 passenger.
+
+```{r include=TRUE}
+notip_passenger_count
+```
+
+The above graph indicates that 5 or 6 passengers are almost surely going to give any kind of tip with a probability of 85% to 90%. For zero passengers, the probability of receiving a trip falls to 60%. Otherwise, the probability of receiving a tip is around 70%.
+
+Overall, passenger count is only a weak predictor of tip amount for low numbers of passengers, as while there is little variability for 75% of data, this predictor only improves the chance of receiving a tip for 0-4 passengers slightly above a coin-toss. It is more useful to determine the chance of any tip occurring if you have a 5 or 6 customers, where you would expect a roughly \$2.50 tip with around 80% certainty.
+
+### Pick-up Borough 
+
+```{r include=TRUE}
+tipamt_pickup_borough
+```
+
+We see that the average tip varies by pick-up borough, with Staten Island giving the highest tip of around \$4. 
+
+```{r include=TRUE}
+notip_pickup_borough
+```
+
+We see that the probability of receiving a tip is highly dependent on the borough, with Staten Island only tipping 12% of the time, while Manhattan tips 85% of the time. As the probabilties are all far above or below 50%, this is a good predictor as you can decide whether there is no tip or a tip based on the pick-up borough, and if there is a tip how much that tip will be on average in that borough.
+
+Overall, these observations suggest that pick-up borough is a reasonable predictor of tip amount as it is influential both on the value and the information provided on the chance of a tip. It is strong at predicting if a tip will occur - if in the Bronx or Staten Island, you have very little chance of a tip, while the other boroughs you would expect a tip. A weakness of this predictor is the interquartile range of values for some boroughs is quite wide, meaning there is a lot of potential variability in the tip value by borough.
+
+### Trip distance
+
+We include only non-zero trip distances to avoid cancellation charges and so on.
+
+```{r include=TRUE}
+tipamt_trip_distance
+```
+
+Trip distance appears highly correlated with tip amount, a 1 mile increase in trip distance corresponding to around a \$0.75 increase in tip.
+
+```{r include=TRUE}
+notip_trip_distance
+```
+
+We see that for 1-5 mile trips there is a roughly 80% chance of a tip being given up to 15 miles, making the short trip distance a good predictor to use. There is a 20% chance of a tip over 15 miles, which itself is useful as you expect longer trips to therefore yield no tip.
+
+Trip distance is an excellent predictor of tip amount, as it both predicts the value of the tip accurately and the chance of the tip from 0-15 miles well, which is a majority of the trips.
+
+## Accumulated Profits in 2021
+
+
+```{r include=TRUE}
+kable(accumulated_profit_2021, 
+      format.args=list(big.mark=","),
+      col.names = c('Company', 'Total Profit'),
+      digits = 2,
+      align = "lc",
+      caption = "Total Profits Per Company in July 2021")
+```
+
+We see that the other vendor has accumulated the most profit, with a value of roughly `r format(accumulated_profit_2021[[3,2]], big.mark=",")`, followed closely by Uber with `r format(accumulated_profit_2021[[2,2]], big.mark=",")`. Green taxi had significantly less profit with `r format(accumulated_profit_2021[[1,2]], big.mark=",")` for July 2021.
+
+##  Total Number of Rides
+
+```{r include=TRUE}
+kable(GT_U_O_total_rides_2021, 
+      format.args=list(big.mark=","),
+      col.names = c('Company', 'Number of Rides'),
+      digits = 0, 
+      align = "lc",
+      caption = "Total Number of Rides Per Company in July 2021 (Excluding Voided Trips)")
+```
+
+Uber and the other vendor have significantly more non-voided rides than Green Taxi.
+
+## Profit Change Over 2021
+
+```{r include=TRUE}
+GT_U_profit_2021
+```
+
+We see that the profit amount for Uber is more variable than Green Taxi, but both Green taxi and Uber both have cyclical daily profits that are seemingly correlated with one another. Green taxi has significantly lower daily profits than Uber.
+
+## Trip Type Revenues
+
+```{r include=TRUE}
+GT_revenue_2021
+```
+
+We see that inner city trips brought significantly more revenue to Green Taxi than outer city ones, and make up a majority of the revenue.
+
+## Most Popular Pick-Up Borough
+
+```{r include=TRUE}
+borough_pickup_2021_total
+```
+
+Manhattan is the most popular pick-up borough for both Green Taxi and Uber, while Brooklyn is the most popular pick-up borough for the other competitor.
+
+```{r include=TRUE}
+borough_pickup_2021_proportion
+```
+
+In the Bronx and Queens, Green Taxi has a much smaller market share than its competitors, with the other competitor taking most of the market share in the Bronx. Green taxi also does not compete on Staten Island where Uber takes most of the market share.
+
+## Peak Hours
+
+```{r include=TRUE}
+service_hours_2021
+```
+
+Green taxi has its peak hours ranging between , while the other competitor has its peak hours around 10:00, and Uber has its peak hours from 15:00 to 19:00.
+
+```{r include=TRUE}
+active_evening_2021
+```
+
+Green Taxi is equally active throughout the day, while Uber is most active in the evening hours and the other competitor is most active in the morning hours.
+
+## Disputed Trips
+
+```{r include=TRUE}
+disputed_proportion
+```

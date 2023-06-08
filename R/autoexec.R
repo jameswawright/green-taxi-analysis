@@ -7,9 +7,6 @@
 #             Katalyze Data Ltd.                                       #
 ########################################################################
 
-# Temporary delete after
-path <- "/Users/jameswright/Desktop/Amadeus/Graduate Programme/katalyze-taxi-case-study/"
-programs_path <- file.path(path, 'R', 'Programs')
 
 #------------------------ Do not unintentionally edit below this line ------------------------
 

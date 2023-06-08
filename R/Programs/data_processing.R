@@ -19,6 +19,7 @@
 
 ### Identify Duplicates and Clean from Data
 
+
 ## taxi_trips duplicates
 
 # Find taxi_trips duplicates
@@ -38,19 +39,20 @@ if (nrow(taxi_trips_duplicates) > 0){
 taxi_time_location_duplicates <- df_duplicated(taxi_time_location)
 
 # Create dataframe without duplicates (if duplicates exist), 0  duplicates no need to recreate.
-if (nrow(taxi_time_location_duplicates)>0){
+if (nrow(taxi_time_location_duplicates) > 0){
   taxi_time_location_unduplicated <- df_unduplicated(taxi_time_location)
 } else{
   print(paste("There were no duplicates in",deparse(substitute(taxi_time_location)),"- dataframe left unchanged."))
 }
 
+
 ## taxi_zone_lookup duplicates
 
 # Find taxi_zone_lookup duplicates
-taxi_zone_lookup_duplicates <- df_duplicated(taxi_zone_lookup)
+taxi_zone_lookup_duplicates <- df_duplicated(taxi_zone_lookup) 
 
-# Create dataframe without duplicates (if duplicates exist), 0  duplicates no need to recreate.
-if (nrow(taxi_zone_lookup_duplicates)){
+# Create dataframe without duplicates (if duplicates exist), 0 duplicates no need to unduplicate.
+if (nrow(taxi_zone_lookup_duplicates) > 0){
   taxi_zone_lookup_unduplicated <- df_unduplicated(taxi_zone_lookup)
 } else{
   print(paste("There were no duplicates in",deparse(substitute(taxi_zone_lookup)),"- dataframe left unchanged."))
@@ -68,43 +70,10 @@ write.xlsx(list("Taxi_Trips" = taxi_trips_duplicates,
            file=file.path(reports_path, "duplicate_data.xlsx"))
 
 
-
-### Summary Statistics of Datasets
-
-## Summary statistics of taxi_trips_unduplicated
-
-# - No Missing UNIQUEID, 83691 values.
-# - No Missing VENDORID, 1=7619, 2=4354, 3=32518 - Unbalanced distribution to consider later.
-# - 32518 Missing STORE_AND_FWD_FLAG, N=50977, Y=196
-# - RATECODEID has 8=32518, which isn't a valid assignment in appendix, will treat as NA next.
-# - 32518 Missing PASSENGER_COUNT, LQ=1, UQ=1, Median=1. Max=32 - extreme values to be considered.
-# - No Missing TRIP_DISTANCE, Mean=194.35Mi, LQ=1.35, UQ=6.20. Min trip_distance = 0 Mi, needs to be reviewed by cases to allocate appropriately. Max. trip distance=260517.93 Mi, large values to be filtered.
-# - No Missing FARE_AMOUNT, Median=$16, LQ = $9, UQ=$26.83. Min=-$150 - need to check for disputes. Max=$480, large values to be filtered.
-# - No Missing EXTRA, Mean=$1.16, Median=$0.50 LQ=$0, UQ=$2.75. Max=$8.25.
-# - No Missing MTA_TAX. Min=-$0.50 - need to check for disputes.
-# - No Missing TIP_AMOUNT. Min=-$1.14 - need to check for disputes. LQ=$0, Median=$0, Mean=$1.059, UQ=$1.66. Max=$87.71 - need to check extreme values in context.
-# - No Missing TOLLS_AMOUNT. Min=$0, LQ=$0, UQ=$0, mean=$0.62. Max.=$30.05 - need to check for errors.
-# - No Missing IMPROVEMENT_SURCHARGE. min=-$0.30, need to check corresponds to disputes.
-# - No Missing TOTAL_AMOUNT. min=-$150.30 - disputes. LQ=$11.75, Median=$19.80 UQ=$31.30. Max=$480.31 - need to filter extreme values.
-# - PAYMENT_TYPE 7=32518 which isn't an option, need to allocate NA. 1=29990, 2=20831,3=307,4=44,5=1 - uneven distribution.
-# - No Missing TRIP_TYPE. 1=49413, 2=1760, 3=32518 - Uneven distribution, need to check allocation.
-# - CONGESTION_SURCHARGE 32518 Missing. min=-$2.75, need to check disputes. max=$2.75.
-print("Summary Statistics of Taxi_Trips_Unduplicated:")
-print(summary(taxi_trips_unduplicated))
+### Handling missing values
 
 
-## Summary statistics of taxi_time_location
-
-# - We see every uniqueID has a drop-off and pick-up (83691*2=167382)
-print("Summary Statistics of Taxi_Time_Location:")
-print(summary(taxi_time_location[,c("UNIQUEID", "TRIP_TYPE")]))
-
-
-
-### Add consistency to missing values
-
-
-## Taxi_Zone_Lookup
+## Taxi_Zone_Lookup missing values
 
 # Make missing datatypes consistent in taxi_zone_lookup so that they can be found by R more easily
 # - Assuming NV is a typo for NA by context of NA in row and full text in the remainder of the column.
@@ -113,44 +82,28 @@ taxi_zone_lookup[,"ZONE"][taxi_zone_lookup[, "ZONE"]=="NV"] <- NA
 taxi_zone_lookup[,"SERVICE_ZONE"][taxi_zone_lookup[, "SERVICE_ZONE"]=="N/A"] <- NA
 
 
-## Taxi_Trips
-
-# Plot distribution of payment_type
-taxi_trips_unduplicated %>% 
-  ggplot(aes(PAYMENT_TYPE, fill=VENDORID)) +
-  geom_bar(na.rm=TRUE, position = "dodge") +
-  labs(title="Most Frequent Payment Type by Vendor") +
-  scale_x_discrete("Payment Type") +
-  scale_y_discrete("Frequency", 
-                     labels=label_number(big.mark = ",")) +
-  theme_minimal()
+## Taxi_Trips missing values
 
 # Make missing datatypes consistent for reporting missing values purposes
-# - Redefining unknown payment_type = 5 as NA for conventional label
-taxi_trips_unduplicated[,"PAYMENT_TYPE"][taxi_trips_unduplicated[, "PAYMENT_TYPE"] == '5'] <- NA
-# - Redefining unknown payment_type = 7 as NA as these values all correspond to VendorID 3 which always has NA columns, so assuming this is just funky-labelled NA.
-taxi_trips_unduplicated[,"PAYMENT_TYPE"][taxi_trips_unduplicated[, "PAYMENT_TYPE"] == '7'] <- NA
+# - Redefining unknown payment_type = 7 as "Unknown" for conventional label
+taxi_trips_unduplicated[,"PAYMENT_TYPE"][taxi_trips_unduplicated[, "PAYMENT_TYPE"] == '7'] <- '5'
 
-# Plot distribution of payment_type after redefining values 5 and 7 as NA. 
-taxi_trips_unduplicated %>% 
-  ggplot(aes(PAYMENT_TYPE, fill=VENDORID)) +
-  geom_bar(na.rm=TRUE, position = "dodge") +
-  labs(title="Most Frequent Payment Type by Vendor") +
-  scale_x_discrete("Payment Type") +
-  scale_y_discrete("Frequency", 
-                   labels=label_number(big.mark = ",")) +
-  theme_minimal()
+# We know that tip_amount only includes credit card tips, from which it follows all positive tip_amounts are credit_card payment type.
+taxi_trips_unduplicated <- taxi_trips_unduplicated %>% 
+  mutate(PAYMENT_TYPE = ifelse(TIP_AMOUNT > 0 & PAYMENT_TYPE == '5',
+                               '1',
+                               PAYMENT_TYPE))
 
-# Plot distribution of ratecodeid. 
-taxi_trips_unduplicated %>% 
-  ggplot(aes(RATECODEID, fill=VENDORID)) +
-  geom_bar(position = "dodge") +
-  labs(title="Most Frequent Rate by Vendor") +
-  scale_x_discrete("Rate") +
-  scale_y_discrete("Frequency", 
-                   labels=label_number(big.mark = ",")) +
-  theme_minimal()
-
+# We know almost all congestion_surcharges occur in the inner city
+#- NA congestion_surcharges will be allocated a value 2.75 for inner city '1'.
+#- '3' Unknown trip_type will be given '1' if positive congestion_surcharge
+taxi_trips_unduplicated <- taxi_trips_unduplicated %>% 
+  mutate(TRIP_TYPE = ifelse(TRIP_TYPE=='3' & CONGESTION_SURCHARGE > 0 & !is.na(CONGESTION_SURCHARGE),
+                               '1',
+                               TRIP_TYPE)) %>% 
+  mutate(CONGESTION_SURCHARGE = ifelse(is.na(CONGESTION_SURCHARGE) & TRIP_TYPE == '1',
+                            2.75,
+                            CONGESTION_SURCHARGE))
 
 
 ### Identify missing values and clean from data
@@ -223,16 +176,20 @@ write.xlsx(list("Taxi_Trips" = taxi_trips_unduplicated_missing,
 
 ### Exploratory Data Analysis and Cleaning of Taxi_Trips_Unduplicated
 
+# Drop entirely missing rows.
+taxi_trips_unduplicated_cleaned <- taxi_trips_unduplicated[rowSums(is.na(taxi_trips_unduplicated)) != ncol(taxi_trips_unduplicated), ]
+
 
 ## Distributions of Trip Distances
 
 # Plot distribution of trip_distances by trip_type, defining outliers as beyond 5*IQR as you expect a wider range of taxis
 #- We see that trip_type=3 (other) has enormous outliers of up to 270,000 Miles which are clearly wrong - we will filter the data to consider up to 40 Miles
-taxi_trips_unduplicated %>% 
+taxi_trips_unduplicated_cleaned %>% 
   ggplot(aes(TRIP_TYPE,
              TRIP_DISTANCE)) +
   geom_boxplot(coef=5,
-               outlier.shape = 3, outlier.size = 0.5) +
+               outlier.shape = 3, 
+               outlier.size = 0.5) +
   labs(title="Boxplots of Trip Distance by Trip Type") +
   scale_x_discrete("Trip Type") +
   scale_y_continuous("Trip Distance", 
@@ -241,16 +198,19 @@ taxi_trips_unduplicated %>%
   theme_minimal()
 
 # Filter trip distances to those less than 40 miles as this is where competition for new york taxis would be generally restricted to
-taxi_trips_unduplicated_cleaned <- taxi_trips_unduplicated %>% 
+taxi_trips_unduplicated_cleaned <- taxi_trips_unduplicated_cleaned %>% 
   filter(TRIP_DISTANCE < 40 | is.na(TRIP_DISTANCE))
 
 # Plot new distribution of trip_distances by trip_type, defining outliers as beyond 5*IQR as you expect a wider range of taxis
 boxplot_type_distance <- taxi_trips_unduplicated_cleaned %>% 
-  ggplot(aes(TRIP_TYPE,
+  ggplot(aes(factor(TRIP_TYPE, 
+                    levels = c('1', '2', '3'), 
+                    labels=c("Inner City","Outer City", "Other")),
              TRIP_DISTANCE)) +
   geom_boxplot(coef=5,
-               outlier.shape = 3, outlier.size = 0.5) +
-  labs(title="Boxplots of Trip Distance by Trip Type (Up to 50 Miles)") +
+               outlier.shape = 3, 
+               outlier.size = 0.5) +
+  labs(title="Boxplots of Trip Distance by Trip Type (Up to 40 Miles)") +
   scale_x_discrete("Trip Type") +
   scale_y_continuous("Trip Distance", 
                      labels=label_number(suffix=" Miles", big.mark = ","),
@@ -273,10 +233,10 @@ taxi_trips_unduplicated %>%
                      n.breaks=10) +
   theme_minimal()
 
-# Filtering data to only include fares of trips between -$100 and $100 and this is where the density of fairs is clustered. 
+# Filtering data to only include fares of trips between -$200 and $200 and this is where the density of fairs is clustered. 
 # - We only filter by fare not other costs as tips can be discretionary outliers, while fares should be somewhat fixed per mile.
 taxi_trips_unduplicated_cleaned <- taxi_trips_unduplicated_cleaned %>% 
-  filter((FARE_AMOUNT < 100 & FARE_AMOUNT > -100) | is.na(FARE_AMOUNT)) 
+  filter((FARE_AMOUNT < 200 & FARE_AMOUNT > -200) | is.na(FARE_AMOUNT)) 
 
 # Density Plot of trip_distance vs fare_amount after filtering
 bin2d_distance_fare <- taxi_trips_unduplicated_cleaned %>% 
@@ -291,16 +251,22 @@ bin2d_distance_fare <- taxi_trips_unduplicated_cleaned %>%
                      n.breaks=10) +
   theme_minimal()
 
+
 ## Distribution of passenger count
 
 # Plot distribution of passenger count
 # - A majority of passengers are 1, with the rest of a non-negligible amount all between 0 and 6. We will filter for 6 or less passengers.
 # - There are some journeys with 0 passengers 
 bar_passenger <- taxi_trips_unduplicated_cleaned %>% 
-  ggplot(aes(PASSENGER_COUNT, fill=VENDORID)) +
+  ggplot(aes(PASSENGER_COUNT, 
+             fill=factor(VENDORID, 
+                         levels = c('1', '2', '3'),
+                         labels = c("Green Taxi", "Uber", "Other")))) +
   geom_bar(position="Dodge") +
   labs(title="Number of Passengers on Trip Distribution", 
        fill="Vendor") +
+  scale_fill_manual(values = c("Green Taxi"='green',
+                               "Uber"='black')) +
   scale_x_continuous("Number of Passengers", 
                      n.breaks=10) +
   scale_y_continuous("Frequency", 
@@ -318,6 +284,8 @@ taxi_trips_unduplicated_cleaned %>%
   geom_bar(position="Dodge") +
   labs(title="Number of Passengers on Trip Distribution (Up to 7 Passengers)", 
        fill="Vendor") +
+  scale_fill_manual(values = c("Green Taxi"='green',
+                                "Uber"='black')) +
   scale_x_continuous("Number of Passengers",
                      n.breaks=6) +
   scale_y_continuous("Frequency", 
@@ -325,11 +293,25 @@ taxi_trips_unduplicated_cleaned %>%
                      n.breaks=10) +
   theme_minimal()
 
-## Add Total_Amount_Plus_Congestion
-taxi_trips_unduplicated_cleaned$TOTAL_AMOUNT_PLUS_CONGESTION <- rowSums(taxi_trips_unduplicated_cleaned[,c("TOTAL_AMOUNT","CONGESTION_SURCHARGE")])
 
 
-
+### Convert categorical taxi_trips_unduplicated_cleaned columns to factors for space-saving, readability, and reporting purposes.
+taxi_trips_unduplicated_cleaned <- taxi_trips_unduplicated_cleaned %>% 
+  mutate(VENDORID = factor(VENDORID, 
+                           levels = c('1', '2', '3'),
+                           labels = c("Green Taxi", "Uber", "Other"))) %>% 
+  mutate(TRIP_TYPE = factor(TRIP_TYPE, 
+                            levels = c('1', '2', '3'), 
+                            labels=c("Inner City","Outer City", "Other"))) %>% 
+  mutate(PAYMENT_TYPE = factor(PAYMENT_TYPE, 
+                               levels=c('1','2','3','4','5','6'),
+                               labels=c("Credit Card", "Cash", "No Charge", "Dispute", "Unknown", "Voided Trip"))) %>% 
+  mutate(RATECODEID = factor(RATECODEID, 
+                             levels=c('1','2','3','4','5','6'),
+                             labels=c("Standard rate", "JFK", "Newark", "Nassau or Westchester", "Negotiated Fare", "Group Ride"))) %>% 
+  mutate(STORE_AND_FWD_FLAG = factor(STORE_AND_FWD_FLAG,
+                                     levels=c('Y','N'),
+                                     labels=c('Store and Forward Trip', 'Not a Store and Forward Trip')))
 
 
 
@@ -337,16 +319,21 @@ taxi_trips_unduplicated_cleaned$TOTAL_AMOUNT_PLUS_CONGESTION <- rowSums(taxi_tri
 
 
 ## Export cleaned taxi_time_location 
-
-
-
-## Export cleaned taxi_trips
-
+write_csv(taxi_time_location,
+          file.path(data_path_clean, "taxi_time_location_cleaned.csv"), 
+          col_names=TRUE)
 
 
 ## Export cleaned taxi_zone_lookup
+write_csv(taxi_zone_lookup,
+          file.path(data_path_clean, "taxi_time_location_cleaned.csv"), 
+          col_names=TRUE)
 
 
+## Export cleaned taxi_trips
+write_csv(taxi_trips_unduplicated_cleaned,
+          file.path(data_path_clean, "taxi_trips_cleaned.csv"), 
+          col_names=TRUE)
 
 
 
@@ -382,9 +369,12 @@ taxi_time_location_wide <- taxi_time_location_wide %>%
 ## Merging taxi_trips and taxi_time_location_wide
 
 # Merge and filter to create taxi_trips_nyc only including observations from 2021, using inner_join as it is the only way to guarantee year 2021
+# - As only late-June to early-August data is available with the bulk of the data from July, we further filtered the data set to only consider July as this makes extrapolation to a year easier (knowledge of a lone month).
 taxi_trips_nyc <-  taxi_time_location_wide %>% 
-  filter(PICKUP_YEAR==2021) %>% 
+  filter(PICKUP_YEAR==2021 & month(PICKUP_DATE)==7) %>% 
   inner_join(taxi_trips_unduplicated_cleaned, by="UNIQUEID")
+
+month(taxi_trips_nyc$PICKUP_DATE)
 
 
 ## Join to taxi_zone_lookup so that the location information can be included for any pickup recorded
@@ -392,7 +382,7 @@ taxi_trips_nyc <- taxi_zone_lookup %>%
   rename_at(vars(c("LOCATIONID", "ZONE","BOROUGH", "SERVICE_ZONE")),
             ~c("PICKUP_LOCATIONID", "PICKUP_ZONE", "PICKUP_BOROUGH", "PICKUP_SERVICE_ZONE")) %>% 
   right_join(taxi_trips_nyc, by="PICKUP_LOCATIONID")
-  
+
 
 
 ### Saving Cleaned Data To Clean Folder
@@ -400,5 +390,6 @@ taxi_trips_nyc <- taxi_zone_lookup %>%
 
 ## Produce csv of taxi_trips_nyc
 
-write_csv(taxi_trips_nyc, file=file.path(data_path_clean,"taxi_trips_nyc.csv"), col_names=TRUE)
-
+write_csv(taxi_trips_nyc, 
+          file=file.path(data_path_clean,"taxi_trips_nyc.csv"), 
+          col_names=TRUE)
