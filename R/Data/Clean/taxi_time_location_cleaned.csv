@@ -262,5 +262,5 @@ LOCATIONID,BOROUGH,ZONE,SERVICE_ZONE
 261,Manhattan,World Trade Center,Yellow Zone
 262,Manhattan,Yorkville East,Yellow Zone
 263,Manhattan,Yorkville West,Yellow Zone
-264,NA,NA,NA
-265,NA,NA,NA
+264,Unknown,Unknown,Unknown
+265,Unknown,Unknown,Unknown

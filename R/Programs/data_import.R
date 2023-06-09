@@ -17,7 +17,7 @@ taxi_trips <- read_csv_better(data_path_raw, "taxi_trips.csv")
 # Rename columns for consistent format between tables
 names(taxi_trips)[names(taxi_trips) == 'PAYMENTTYPE'] <- 'PAYMENT_TYPE'
 
-# Format types
+# Reformat types
 # - Reformat VENDORID, RATECODEID, PAYMENTTYPE, TRIP_TYPE columns as character
 # - Reformat PASSENGER_COUNT as integer
 # - Reformat EHAIL_FEE as double - supposed to be $ amount - ALL VALUES MISSING

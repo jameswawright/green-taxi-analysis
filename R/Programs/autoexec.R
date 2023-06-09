@@ -7,46 +7,51 @@
 #             Katalyze Data Ltd.                                       #
 ########################################################################
 
+#------------------------ Do not unintentionally edit below this line ------------------------
+
+### Set seed for reproducibility
+set.seed(2023)
+
+
+
+### Assign paths to file structure
+
+
+## Paths
+
+# Path to raw data
+data_path_raw <- file.path(path, "R", "Data","Raw")
+
+# Path to detailed/cleaned data
+data_path_clean <- file.path(path, "R", "Data","Clean")
+
+# Path to reports
+reports_path <- file.path(path, "R", "Reports")
+
 
 
 ### Install and import required packages and libraries
 
-## Install any missing packages if missing
+## Import required libraries
 
-# Install ggplot2
-if(!require("ggplot2")){
-  install.packages("ggplot2")
-} 
-# Install dplyr
-if(!require("dplyr")) {
-  install.packages("dplyr")
-} 
-# Install tibble
-if(!require("tibble")) {
-  install.packages("tibble")
-} 
-# Install stringr
-if(!require("stringr")) {
-  install.packages("stringr")
-} 
-# Install libridate
-if(!require("lubridate")) {
-  install.packages("lubridate")
-}
-# Install readr
-if(!require("readr")) {
-  install.packages("readr")
-}
-# Install tidyr
-if(!require("tidyr")) {
-  install.packages("tidyr")
-}
-
-# Import required libraries
+# Plotting
 library(ggplot2)
+library(scales)
+
+# Data Manipulation
 library(dplyr)
 library(tibble)
 library(stringr)
 library(lubridate)
-library(readr)
 library(tidyr)
+library(purrr)
+
+# Import/Export
+library(readr)
+library(openxlsx)
+
+#Other
+library(roxygen2)
+
+## Import support utility functions package
+source(file.path(programs_path,"utilities.R"), echo=FALSE)

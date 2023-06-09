@@ -38,20 +38,20 @@ write_csv(average_spent_week_green_taxi_2021,
 ## Pick-up hour
 
 # Boxplot of tip amount by pick-up hour
-#- Filtering data to only include credit card values as tip_amount only includes these
-#- Filtering data to only tips between 0 and 25, to ignore extreme outliers. 
+#- Filtering data to only include credit card values as tip_amount only includes these.
 #- Using coefficient of 5 as you expect more extreme outlier variability in tips naturally based on different peoples' inherent generosity.
 tipamt_pickup_hour <- taxi_trips_nyc %>% 
-  filter(TIP_AMOUNT > 0 & TIP_AMOUNT < 25 & PAYMENT_TYPE == "Credit Card") %>% 
+  filter(TIP_AMOUNT > 0 & PAYMENT_TYPE == "Credit Card") %>% 
   ggplot(aes(factor(PICKUP_HOUR), TIP_AMOUNT)) +
   geom_boxplot(coef=5,
                outlier.shape = 3, 
-               outlier.size = 0.5) +
+               outlier.size = 0.5,
+               na.rm=TRUE) +
   labs(title="Boxplots of Tip Amounts by Pick-Up Hour") +
   scale_x_discrete("Pick-Up Hour") +
   scale_y_continuous("Tip Amount", 
                      labels=scales::dollar,
-                     n.breaks=10) +
+                     n.breaks=20) +
   theme_minimal()
 
 # Bar chart of tip amount, binned as tip or no tip, by pick-up hour
@@ -61,7 +61,8 @@ notip_pickup_hour <- taxi_trips_nyc %>%
   ggplot(aes(factor(PICKUP_HOUR), fill=cut(TIP_AMOUNT,
                                       breaks = c(-Inf, 0, Inf),
                                       labels = c("No Tip", "Tip")))) +
-  geom_bar(position='fill') +
+  geom_bar(position='fill',
+           na.rm=TRUE) +
   labs(title="Bar chart of Tip Amounts by Pick-Up Hour",
        fill="Tip Given") +
   scale_x_discrete("Pick-Up Hour") +
@@ -79,21 +80,21 @@ print("Cannot graph payment type as tip amount is assessed purely on credit card
 ## Passenger count
 
 # Boxplot of tip amount by passenger_count
-#- Filtering data to only include credit card values as tip_amount only includes these
-#- Filtering data to only tips between 0 and 25, to ignore extreme outliers. 
+#- Filtering data to only include credit card values as tip_amount only includes these.
 #- Using coefficient of 5 as you expect more extreme outlier variability in tips naturally based on different peoples' inherent generosity.
 #- Excluding other vendor as passenger count was unknown
 tipamt_passenger_count <- taxi_trips_nyc %>% 
-  filter(TIP_AMOUNT > 0 & TIP_AMOUNT < 25 & PAYMENT_TYPE == "Credit Card" & VENDORID !="Other") %>% 
+  filter(TIP_AMOUNT > 0 & PAYMENT_TYPE == "Credit Card" & VENDORID !="Other") %>% 
   ggplot(aes(factor(PASSENGER_COUNT), TIP_AMOUNT)) +
   geom_boxplot(coef=5,
                outlier.shape = 5, 
-               outlier.size = 0.5) +
+               outlier.size = 0.5,
+               na.rm=TRUE) +
   labs(title="Boxplots of Tip Amounts by Passenger Count") +
   scale_x_discrete("Passenger Count") +
   scale_y_continuous("Tip Amount", 
                      labels=scales::dollar,
-                     n.breaks=10) +
+                     n.breaks=20) +
   theme_minimal()
 
 # Bar chart of tip amount, binned as tip or no tip, by passenger_count
@@ -104,7 +105,8 @@ notip_passenger_count <- taxi_trips_nyc %>%
   ggplot(aes(factor(PASSENGER_COUNT), fill=cut(TIP_AMOUNT,
                                            breaks = c(-Inf, 0, Inf),
                                            labels = c("No Tip", "Tip")))) +
-  geom_bar(position='fill') +
+  geom_bar(position='fill',
+           na.rm=TRUE) +
   labs(title="Boxplots of Tip Amounts by Passenger Count",
        fill="Tip Given") +
   scale_x_discrete("Passenger Count") +
@@ -117,15 +119,15 @@ notip_passenger_count <- taxi_trips_nyc %>%
 ## Pick-up Borough 
 
 # Boxplot of tip amount by pick-up borough
-#- Filtering data to only include credit card values as tip_amount only includes these
-#- Filtering data to only tips between 0 and 25, to ignore extreme outliers. 
+#- Filtering data to only include credit card values as tip_amount only includes these.
 #- Using coefficient of 5 as you expect more extreme outlier variability in tips naturally based on different peoples' inherent generosity.
 tipamt_pickup_borough <- taxi_trips_nyc %>% 
-  filter(TIP_AMOUNT > 0 & TIP_AMOUNT < 25 & PAYMENT_TYPE == "Credit Card") %>% 
+  filter(TIP_AMOUNT > 0 & PAYMENT_TYPE == "Credit Card") %>% 
   ggplot(aes(factor(PICKUP_BOROUGH), TIP_AMOUNT)) +
   geom_boxplot(coef=5,
                outlier.shape = 5, 
-               outlier.size = 0.5) +
+               outlier.size = 0.5,
+               na.rm=TRUE) +
   labs(title="Boxplots of Tip Amounts by Pick-Up Borough") +
   scale_x_discrete("Pick-Up Borough") +
   scale_y_continuous("Tip Amount", 
@@ -140,7 +142,8 @@ notip_pickup_borough <- taxi_trips_nyc %>%
   ggplot(aes(factor(PICKUP_BOROUGH), fill=cut(TIP_AMOUNT,
                                                breaks = c(-Inf, 0, Inf),
                                                labels = c("No Tip", "Tip")))) +
-  geom_bar(position='fill') +
+  geom_bar(position='fill',
+           na.rm=TRUE) +
   labs(title="Bar chart of Tip Amounts by Pick-Up Borough",
        fill="Tip Given") +
   scale_x_discrete("Pick-Up Borough") +
@@ -153,14 +156,20 @@ notip_pickup_borough <- taxi_trips_nyc %>%
 ## Trip distance
 
 # Boxplot of tip amount by trip_distance
-#- Filtering data to only include credit card values as tip_amount only includes these
-#- Filtering data to only tips between 0 and 25, to ignore extreme outliers. 
+#- Filtering data to only include credit card values as tip_amount only includes these.
 #- Using coefficient of 5 as you expect more extreme outlier variability in tips naturally based on different peoples' inherent generosity.
 tipamt_trip_distance <- taxi_trips_nyc %>% 
-  filter(TIP_AMOUNT > 0 & TIP_AMOUNT < 25 & TRIP_DISTANCE > 0 & PAYMENT_TYPE == "Credit Card") %>% 
+  filter(TIP_AMOUNT > 0 & TRIP_DISTANCE > 0 & TRIP_DISTANCE < 40 & PAYMENT_TYPE == "Credit Card") %>% 
   ggplot(aes(TRIP_DISTANCE, TIP_AMOUNT)) +
-  geom_point(size=0.5, alpha = 0.55, shape=3) +
-  geom_abline(colour='red', size=1.25) +
+  geom_point(size=0.5, 
+             alpha = 0.55, 
+             shape=3,
+             na.rm=TRUE) + 
+  geom_smooth(formula = y ~ x,
+              method='lm', 
+              colour='palevioletred', 
+              size=1.25,
+              na.rm=TRUE) +
   labs(title="Scatterplot of Tip Amounts by Pick-Up Borough") +
   scale_x_continuous("Trip Distance",
                      labels=label_number(suffix = " Miles")) +
@@ -172,14 +181,15 @@ tipamt_trip_distance <- taxi_trips_nyc %>%
 # Bar chart of tip amount, binned as tip or no tip, by trip_distance
 #- Filtering data to only include credit card values as tip_amount only includes these
 notip_trip_distance <- taxi_trips_nyc %>% 
-  filter(PAYMENT_TYPE == "Credit Card") %>% 
+  filter(PAYMENT_TYPE == "Credit Card" & !is.na(TRIP_DISTANCE)) %>% 
   ggplot(aes(cut(TRIP_DISTANCE,
-                 breaks=c(-Inf, 1, 5, 15, 40),
-                 labels=c("0-1 Miles", "1-5 Miles", "5-15 Miles", "15-40 Miles")), 
+                 breaks=c(-Inf, 5, 20, 40),
+                 labels=c("0-5 Miles", "5-20 Miles", "20-40 Miles")), 
              fill=cut(TIP_AMOUNT,
                       breaks = c(-Inf, 0, Inf),
                       labels = c("No Tip", "Tip")))) +
-  geom_bar(position='fill') +
+  geom_bar(position='fill',
+           na.rm=TRUE) +
   labs(title="Bar Chart of Tip Amounts by Trip Distance",
        fill="Tip Given") +
   scale_x_discrete("Trip Distance") +
@@ -207,10 +217,10 @@ write_csv(accumulated_profit_2021,
 
 ###  Total number of rides, excluding voided trips, of Green Taxi and its competitors
 
+# Compute total number of rides
 GT_U_O_total_rides_2021 <- taxi_trips_nyc %>% 
   filter(PAYMENT_TYPE!="Voided Trip") %>%
   count(VENDORID)
-  
 
 ## Output summary table
 
@@ -297,7 +307,8 @@ borough_pickup_2021_proportion <- taxi_trips_nyc %>%
 
 service_hours_2021 <- taxi_trips_nyc %>% 
   ggplot(aes(PICKUP_HOUR, colour=VENDORID)) +
-  geom_freqpoly(bins=24, na.rm=TRUE) +
+  geom_freqpoly(bins=24, 
+                na.rm=TRUE) +
   labs(title="Peak Hours by Vendor in July 2021", 
        colour="Vendor") +
   scale_color_manual(values = c("Green Taxi"='green',
@@ -335,14 +346,20 @@ active_evening_2021 <- taxi_trips_nyc %>%
 ### Find  taxi provider has the biggest proportion of disputed trips out of their total number of taxi trips
 
 
-## Bar chart for proportion of disputed trips out of total number of trips by vendor
+## Bar chart for proportion of disputed trips out of total number of trips by vendor - recoding non-disputes as no dispute for comparison
 disputed_proportion <- taxi_trips_nyc %>% 
-  ggplot(aes(VENDORID, fill=PAYMENT_TYPE)) +
-  geom_bar(position='fill',
-           na.rm=TRUE) +
-  labs(title="Proportion of Trips Disputed, by Vendor in July 2021", 
-       fill="Payment Type") + 
-  scale_x_discrete("Pick-Up Hour") +
-  scale_y_continuous("Percentage of Vendor Trips",
-                     labels=scales::percent) +
+  ggplot(aes(VENDORID, fill=recode(PAYMENT_TYPE,
+                                   "Dispute" = "Dispute",
+                                   "Credit Card" = "No Dispute",
+                                   "Cash" = "No Dispute",
+                                   "No Charge" = "No Dispute",
+                                   "Unknown" = "No Dispute",
+                                   "Voided Trip" = "No Dispute"))) +
+  geom_bar(position='fill') + 
+  labs(title="Proportion of Trips Being Disputes for Each Company in July 2021", 
+       fill="Disputes") +
+  scale_x_discrete("Vendor") + 
+  scale_y_continuous("Proportion of Disputes", 
+                     labels = percent,
+                     n.breaks = 10) +
   theme_minimal()
